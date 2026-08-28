@@ -1,0 +1,31 @@
+----officer nodes-----
+create(:officer {id:randomUUID(),name:'arjun rao',rank:'colonel',rank_val:3,status:'alive'});
+create(:officer {id:randomUUID(),name:'karthik singh',rank:'lieutenant',rank_val:1,status:'alive'});
+create(:officer {id:randomUUID(),name:'daniel thompson',rank:'captain',rank_val:2,status:'alive'});
+create(:officer {id:randomUUID(),name:'mukhund varadharajan',rank:'major',rank_val:4,status:'alive'});
+create(:officer {id:randomUUID(),name:'abhindandhan jai',rank:'general',rank_val:5,status:'alive'});
+create(:officer {id:randomUUID(),name:'michael faraday',rank:'colonel',rank_val:3,status:'alive'});
+
+----checkpoint nodes----
+create(:checkpoint {id:randomUUID(),name:'tambaram',status:'open',type:'depot',lat:12.92,lng:80.13});
+create(:checkpoint {id:randomUUID(),name:'avadi',status:'open',type:'base',lat:13.11,lng:80.10});
+create(:checkpoint {id:randomUUID(),name:'st_thomas_mount',status:'open',type:'HQ',lat:13.01,lng:80.20});
+create(:checkpoint {id:randomUUID(),name:'wellington',status:'open',type:'base',lat:11.35,lng:76.79});
+create(:checkpoint {id:randomUUID(),name:'sulur',status:'open',type:'outpost',lat:11.02,lng:77.16});
+create(:checkpoint {id:randomUUID(),name:'ins_rajali',status:'open',type:'base',lat:13.09,lng:79.67});
+create(:checkpoint {id:randomUUID(),name:'ennore',status:'open',type:'outpost',lat:13.23,lng:80.32});
+create(:checkpoint {id:randomUUID(),name:'ramanathapuram',status:'open',type:'base',lat:9.37,lng:78.83});
+create(:checkpoint {id:randomUUID(),name:'thanjavur',status:'open',type:'depot',lat:10.78,lng:79.10});
+create(:checkpoint {id:randomUUID(),name:'chengalpet',status:'open',type:'HQ',lat:12.69,lng:79.98});
+
+----troop nodes----
+create(:troop {id:randomUUID(),type:"kill",head_count:15,priority:1,status:"started"});
+
+
+
+
+
+
+
+----threat event nodes----
+create(:threatevent {id:randomUUID(),type:"attack",timestamp:datetime(),severity:1});
