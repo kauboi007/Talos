@@ -1,2 +1,2 @@
-# DBMSproject
-DBMS course final project
+# Talos
+Defense analysis system
