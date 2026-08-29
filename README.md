@@ -3,4 +3,5 @@ Defense analysis system
 
 
 # Kaushik
-- Currently making nodes and relationships
+- done making nodes and relationships(sample data)✔️
+- working on a* algo

@@ -21,3 +21,12 @@ THREAT EVENT SEVERITY
 1 - very severe
 2 - 
 3 - low severity
+
+========================
+
+CHECKPOINT TYPES
+
+-DEPOT
+-BASE
+-OUTPOST
+-HQ

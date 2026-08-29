@@ -11,5 +11,5 @@ class neo4jconnection:
             return [r.data() for r in res]
 
 conn=neo4jconnection("neo4j://127.0.0.1:7687","neo4j","talossys")
-res=conn.run_query("create(:officer {id:1})")
+res=conn.run_query("match (o:officer) return count(o)")
 print(res)
