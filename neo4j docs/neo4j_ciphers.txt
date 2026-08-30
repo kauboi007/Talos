@@ -1,0 +1,168 @@
+----officer nodes-----
+create(:officer {id:randomUUID(),name:'arjun rao',rank:'colonel',rank_val:3,status:'alive'});
+create(:officer {id:randomUUID(),name:'karthik singh',rank:'lieutenant',rank_val:1,status:'alive'});
+create(:officer {id:randomUUID(),name:'daniel thompson',rank:'captain',rank_val:2,status:'alive'});
+create(:officer {id:randomUUID(),name:'mukhund varadharajan',rank:'major',rank_val:4,status:'alive'});
+create(:officer {id:randomUUID(),name:'abhindandhan jai',rank:'general',rank_val:5,status:'alive'});
+create(:officer {id:randomUUID(),name:'michael faraday',rank:'colonel',rank_val:3,status:'alive'});
+create(:officer {id:randomUUID(),name:'ravi kumar',rank:'lieutenant',rank_val:1,status:'alive'});
+create(:officer {id:randomUUID(),name:'sneha pillai',rank:'captain',rank_val:2,status:'alive'});
+
+----checkpoint nodes----
+create(:checkpoint {id:randomUUID(),name:'tambaram',status:'open',type:'depot',lat:12.92,lng:80.13});
+create(:checkpoint {id:randomUUID(),name:'avadi',status:'open',type:'base',lat:13.11,lng:80.10});
+create(:checkpoint {id:randomUUID(),name:'st_thomas_mount',status:'open',type:'HQ',lat:13.01,lng:80.20});
+create(:checkpoint {id:randomUUID(),name:'wellington',status:'open',type:'base',lat:11.35,lng:76.79});
+create(:checkpoint {id:randomUUID(),name:'sulur',status:'open',type:'outpost',lat:11.02,lng:77.16});
+create(:checkpoint {id:randomUUID(),name:'ins_rajali',status:'open',type:'base',lat:13.09,lng:79.67});
+create(:checkpoint {id:randomUUID(),name:'ennore',status:'open',type:'outpost',lat:13.23,lng:80.32});
+create(:checkpoint {id:randomUUID(),name:'ramanathapuram',status:'open',type:'base',lat:9.37,lng:78.83});
+create(:checkpoint {id:randomUUID(),name:'thanjavur',status:'open',type:'depot',lat:10.78,lng:79.10});
+create(:checkpoint {id:randomUUID(),name:'chengalpet',status:'open',type:'HQ',lat:12.69,lng:79.98});
+
+----troop nodes----
+create(:troop {id:randomUUID(),name:"alpha",type:"kill",head_count:4,priority:1,status:"started"});
+create(:troop {id:randomUUID(),name:"delta",type:"medic",head_count:2,priority:2,status:"started"});
+create(:troop {id:randomUUID(),name:"bravo",type:"logistics",head_count:6,priority:2,status:"started"});
+create(:troop {id:randomUUID(),name:"charlie",type:"kill",head_count:5,priority:1,status:"started"});
+
+----threat event nodes----
+create(:threatevent {id:randomUUID(),name:"a1",type:"attack",timestamp:datetime(),severity:1});
+create(:threatevent {id:randomUUID(),name:"b1",type:"block",timestamp:datetime(),severity:3});
+
+----relationships----
+
+=======>ROUTE_TO — branching graph, distances approx real km between these locations
+
+MATCH (c1:checkpoint {name:'tambaram'}), (c2:checkpoint {name:'avadi'})
+CREATE (c1)-[:route_to {distance: 20}]->(c2);
+
+MATCH (c1:checkpoint {name:'tambaram'}), (c2:checkpoint {name:'st_thomas_mount'})
+CREATE (c1)-[:route_to {distance: 15}]->(c2);
+
+MATCH (c1:checkpoint {name:'tambaram'}), (c2:checkpoint {name:'ennore'})
+CREATE (c1)-[:route_to {distance: 35}]->(c2);
+
+MATCH (c1:checkpoint {name:'avadi'}), (c2:checkpoint {name:'ins_rajali'})
+CREATE (c1)-[:route_to {distance: 65}]->(c2);
+
+MATCH (c1:checkpoint {name:'chengalpet'}), (c2:checkpoint {name:'thanjavur'})
+CREATE (c1)-[:route_to {distance: 280}]->(c2);
+
+MATCH (c1:checkpoint {name:'thanjavur'}), (c2:checkpoint {name:'ramanathapuram'})
+CREATE (c1)-[:route_to {distance: 180}]->(c2);
+
+MATCH (c1:checkpoint {name:'chengalpet'}), (c2:checkpoint {name:'sulur'})
+CREATE (c1)-[:route_to {distance: 500}]->(c2);
+
+MATCH (c1:checkpoint {name:'sulur'}), (c2:checkpoint {name:'wellington'})
+CREATE (c1)-[:route_to {distance: 70}]->(c2);
+
+MATCH (c1:checkpoint {name:'ins_rajali'}), (c2:checkpoint {name:'sulur'})
+CREATE (c1)-[:route_to {distance: 350}]->(c2);
+
+=======> STATIONED_AT — officer to checkpoint
+
+MATCH (o:officer {name:'arjun rao'}), (c:checkpoint {name:'tambaram'})
+CREATE (o)-[:stationed_at]->(c);
+
+MATCH (o:officer {name:'karthik singh'}), (c:checkpoint {name:'avadi'})
+CREATE (o)-[:stationed_at]->(c);
+
+MATCH (o:officer {name:'daniel thompson'}), (c:checkpoint {name:'chengalpet'})
+CREATE (o)-[:stationed_at]->(c);
+
+MATCH (o:officer {name:'mukhund varadharajan'}), (c:checkpoint {name:'thanjavur'})
+CREATE (o)-[:stationed_at]->(c);
+
+MATCH (o:officer {name:'abhindandhan jai'}), (c:checkpoint {name:'st_thomas_mount'})
+CREATE (o)-[:stationed_at]->(c);
+
+MATCH (o:officer {name:'michael faraday'}), (c:checkpoint {name:'sulur'})
+CREATE (o)-[:stationed_at]->(c);
+
+MATCH (o:officer {name:'ravi kumar'}), (c:checkpoint {name:'st_thomas_mount'})
+CREATE (o)-[:stationed_at]->(c);
+
+MATCH (o:officer {name:'sneha pillai'}), (c:checkpoint {name:'ennore'})
+CREATE (o)-[:stationed_at]->(c);
+
+=======>REPORTS_TO — built from rank_val hierarchy
+
+MATCH (a:officer {name:'karthik singh'}), (b:officer {name:'daniel thompson'})
+CREATE (a)-[:reports_to]->(b);
+
+MATCH (a:officer {name:'daniel thompson'}), (b:officer {name:'arjun rao'})
+CREATE (a)-[:reports_to]->(b);
+
+MATCH (a:officer {name:'arjun rao'}), (b:officer {name:'mukhund varadharajan'})
+CREATE (a)-[:reports_to]->(b);
+
+MATCH (a:officer {name:'michael faraday'}), (b:officer {name:'mukhund varadharajan'})
+CREATE (a)-[:reports_to]->(b);
+
+MATCH (a:officer {name:'mukhund varadharajan'}), (b:officer {name:'abhindandhan jai'})
+CREATE (a)-[:reports_to]->(b);
+
+MATCH (a:officer {name:'ravi kumar'}), (b:officer {name:'arjun rao'})
+CREATE (a)-[:reports_to]->(b);
+
+MATCH (a:officer {name:'sneha pillai'}), (b:officer {name:'mukhund varadharajan'})
+CREATE (a)-[:reports_to]->(b);
+
+=======>ESCORTS — officer to troop 
+
+MATCH (o:officer {name:'arjun rao'}), (t:troop {name:'delta'})
+CREATE (t)-[:escorts]->(o);
+
+MATCH (o:officer {name:'abhindandhan jai'}), (t:troop {name:'alpha'})
+CREATE (t)-[:escorts]->(o);
+
+=======>AFFECTS — threatevent to checkpoint
+
+MATCH (te:threatevent {name:'a1'}), (c:checkpoint {name:'chengalpet'})
+CREATE (te)-[:affects]->(c);
+
+MATCH (te:threatevent {name:'b1'}), (c:checkpoint {name:'thanjavur'})
+CREATE (te)-[:affects]->(c);
+
+=======>BELONGS_TO
+
+MATCH (o:officer {name:'karthik singh'}), (t:troop {name:'alpha'})
+CREATE (o)-[:belongs_to]->(t);
+
+MATCH (o:officer {name:'daniel thompson'}), (t:troop {name:'delta'})
+CREATE (o)-[:belongs_to]->(t);
+
+MATCH (o:officer {name:'ravi kumar'}), (t:troop {name:'bravo'})
+CREATE (o)-[:belongs_to]->(t);
+
+MATCH (o:officer {name:'sneha pillai'}), (t:troop {name:'charlie'})
+CREATE (o)-[:belongs_to]->(t);
+
+
+=======> STARTS_AT / ENDS_AT 
+
+// alpha: tambaram -> ins_rajali (path goes through avadi)
+MATCH (t:troop {name:'alpha'}), (c:checkpoint {name:'tambaram'})
+CREATE (t)-[:starts_at]->(c);
+MATCH (t:troop {name:'alpha'}), (c:checkpoint {name:'ins_rajali'})
+CREATE (t)-[:ends_at]->(c);
+
+// bravo: st_thomas_mount -> sulur (path goes through avadi -> ins_rajali -> sulur, OR chengalpet -> sulur)
+MATCH (t:troop {name:'bravo'}), (c:checkpoint {name:'st_thomas_mount'})
+CREATE (t)-[:starts_at]->(c);
+MATCH (t:troop {name:'bravo'}), (c:checkpoint {name:'sulur'})
+CREATE (t)-[:ends_at]->(c);
+
+// charlie: ennore -> wellington (long haul, likely funnels through tambaram/avadi/ins_rajali/sulur too)
+MATCH (t:troop {name:'charlie'}), (c:checkpoint {name:'ennore'})
+CREATE (t)-[:starts_at]->(c);
+MATCH (t:troop {name:'charlie'}), (c:checkpoint {name:'wellington'})
+CREATE (t)-[:ends_at]->(c);
+
+// delta: chengalpet -> thanjavur
+MATCH (t:troop {name:'delta'}), (c:checkpoint {name:'chengalpet'})
+CREATE (t)-[:starts_at]->(c);
+MATCH (t:troop {name:'delta'}), (c:checkpoint {name:'thanjavur'})
+CREATE (t)-[:ends_at]->(c);
