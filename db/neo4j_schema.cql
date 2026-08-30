@@ -1,4 +1,4 @@
-----officer nodes-----
+// ----officer nodes-----
 create(:officer {id:randomUUID(),name:'arjun rao',rank:'colonel',rank_val:3,status:'alive'});
 create(:officer {id:randomUUID(),name:'karthik singh',rank:'lieutenant',rank_val:1,status:'alive'});
 create(:officer {id:randomUUID(),name:'daniel thompson',rank:'captain',rank_val:2,status:'alive'});
@@ -8,7 +8,7 @@ create(:officer {id:randomUUID(),name:'michael faraday',rank:'colonel',rank_val:
 create(:officer {id:randomUUID(),name:'ravi kumar',rank:'lieutenant',rank_val:1,status:'alive'});
 create(:officer {id:randomUUID(),name:'sneha pillai',rank:'captain',rank_val:2,status:'alive'});
 
-----checkpoint nodes----
+// ----checkpoint nodes----
 create(:checkpoint {id:randomUUID(),name:'tambaram',status:'open',type:'depot',lat:12.92,lng:80.13});
 create(:checkpoint {id:randomUUID(),name:'avadi',status:'open',type:'base',lat:13.11,lng:80.10});
 create(:checkpoint {id:randomUUID(),name:'st_thomas_mount',status:'open',type:'HQ',lat:13.01,lng:80.20});
@@ -20,19 +20,19 @@ create(:checkpoint {id:randomUUID(),name:'ramanathapuram',status:'open',type:'ba
 create(:checkpoint {id:randomUUID(),name:'thanjavur',status:'open',type:'depot',lat:10.78,lng:79.10});
 create(:checkpoint {id:randomUUID(),name:'chengalpet',status:'open',type:'HQ',lat:12.69,lng:79.98});
 
-----troop nodes----
+// ----troop nodes----
 create(:troop {id:randomUUID(),name:"alpha",type:"kill",head_count:4,priority:1,status:"started"});
 create(:troop {id:randomUUID(),name:"delta",type:"medic",head_count:2,priority:2,status:"started"});
 create(:troop {id:randomUUID(),name:"bravo",type:"logistics",head_count:6,priority:2,status:"started"});
 create(:troop {id:randomUUID(),name:"charlie",type:"kill",head_count:5,priority:1,status:"started"});
 
-----threat event nodes----
+// ----threat event nodes----
 create(:threatevent {id:randomUUID(),name:"a1",type:"attack",timestamp:datetime(),severity:1});
 create(:threatevent {id:randomUUID(),name:"b1",type:"block",timestamp:datetime(),severity:3});
 
-----relationships----
+// ----relationships----
 
-=======>ROUTE_TO — branching graph, distances approx real km between these locations
+// =======>ROUTE_TO — branching graph, distances approx real km between these locations
 
 MATCH (c1:checkpoint {name:'tambaram'}), (c2:checkpoint {name:'avadi'})
 CREATE (c1)-[:route_to {distance: 20}]->(c2);
@@ -61,7 +61,7 @@ CREATE (c1)-[:route_to {distance: 70}]->(c2);
 MATCH (c1:checkpoint {name:'ins_rajali'}), (c2:checkpoint {name:'sulur'})
 CREATE (c1)-[:route_to {distance: 350}]->(c2);
 
-=======> STATIONED_AT — officer to checkpoint
+// =======> STATIONED_AT — officer to checkpoint
 
 MATCH (o:officer {name:'arjun rao'}), (c:checkpoint {name:'tambaram'})
 CREATE (o)-[:stationed_at]->(c);
@@ -87,7 +87,7 @@ CREATE (o)-[:stationed_at]->(c);
 MATCH (o:officer {name:'sneha pillai'}), (c:checkpoint {name:'ennore'})
 CREATE (o)-[:stationed_at]->(c);
 
-=======>REPORTS_TO — built from rank_val hierarchy
+// =======>REPORTS_TO — built from rank_val hierarchy
 
 MATCH (a:officer {name:'karthik singh'}), (b:officer {name:'daniel thompson'})
 CREATE (a)-[:reports_to]->(b);
@@ -110,7 +110,7 @@ CREATE (a)-[:reports_to]->(b);
 MATCH (a:officer {name:'sneha pillai'}), (b:officer {name:'mukhund varadharajan'})
 CREATE (a)-[:reports_to]->(b);
 
-=======>ESCORTS — officer to troop 
+// =======>ESCORTS — officer to troop 
 
 MATCH (o:officer {name:'arjun rao'}), (t:troop {name:'delta'})
 CREATE (t)-[:escorts]->(o);
@@ -118,7 +118,7 @@ CREATE (t)-[:escorts]->(o);
 MATCH (o:officer {name:'abhindandhan jai'}), (t:troop {name:'alpha'})
 CREATE (t)-[:escorts]->(o);
 
-=======>AFFECTS — threatevent to checkpoint
+// =======>AFFECTS — threatevent to checkpoint
 
 MATCH (te:threatevent {name:'a1'}), (c:checkpoint {name:'chengalpet'})
 CREATE (te)-[:affects]->(c);
@@ -126,7 +126,7 @@ CREATE (te)-[:affects]->(c);
 MATCH (te:threatevent {name:'b1'}), (c:checkpoint {name:'thanjavur'})
 CREATE (te)-[:affects]->(c);
 
-=======>BELONGS_TO
+// =======>BELONGS_TO
 
 MATCH (o:officer {name:'karthik singh'}), (t:troop {name:'alpha'})
 CREATE (o)-[:belongs_to]->(t);
@@ -141,7 +141,7 @@ MATCH (o:officer {name:'sneha pillai'}), (t:troop {name:'charlie'})
 CREATE (o)-[:belongs_to]->(t);
 
 
-=======> STARTS_AT / ENDS_AT 
+// =======> STARTS_AT / ENDS_AT 
 
 // alpha: tambaram -> ins_rajali (path goes through avadi)
 MATCH (t:troop {name:'alpha'}), (c:checkpoint {name:'tambaram'})
