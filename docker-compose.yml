@@ -1,0 +1,59 @@
+services:
+  redis:
+    image: redis
+    networks:
+      - talos-net
+  
+  neo4j:
+    image: neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=${NEO4J_AUTH}
+    volumes:
+      - neo4j-data:/data
+      - ./db/neo4j_schema.cql:/var/lib/neo4j/import/neo4j_schema.cql
+    networks:
+      - talos-net
+  
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - talos-net
+  
+  server:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+      - "5173:5173"
+    volumes:
+      - ./web:/var/www/html
+      - vendor:/var/www/html/vendor
+      - node_modules:/var/www/html/node_modules
+    networks:
+      - talos-net
+    environment:
+      - DB_DSN=mongodb://${MONGO_USER}:${MONGO_PASS}@mongo:27017
+    depends_on:
+      - mongo
+      - redis
+
+networks:
+  talos-net:
+    driver: bridge
+
+volumes:
+  neo4j-data:
+  mongo-data:
+  vendor:
+  node_modules:
