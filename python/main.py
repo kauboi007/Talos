@@ -1,6 +1,6 @@
-from db import neo4jconnection
-from data_loader import get_coords,get_subgraph
-from pathfinding import astar
+from .db import neo4jconnection
+from .data_loader import get_coords,get_subgraph
+from .pathfinding import astar
 
 
 #connection
