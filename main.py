@@ -1,6 +1,6 @@
 from db import neo4jconnection
 from data_loader import get_coords,get_subgraph
-from pathfinding import astar
+from pathfinding import astar,find_conflict
 
 
 #connection
@@ -12,5 +12,7 @@ coords=get_coords(conn)
 #get subgraph
 subgraph=get_subgraph(conn)
 
-path,cost=astar('tambaram','ennore',subgraph,coords)
-print(path,cost)
+path1,cost1=astar('tambaram','avadi',subgraph,coords)
+path2,cost2=astar('tambaram','ennore',subgraph,coords)
+
+find_conflict(path1,path2)
