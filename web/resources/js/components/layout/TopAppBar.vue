@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { ViewMode } from '../../types';
-import Icon from '../common/Icon.vue';
+import { Link } from '@inertiajs/vue3';
+import Icon from '@/components/common/Icon.vue';
 
 interface Props {
-  currentView: ViewMode;
+  currentView?: string;
   searchQuery?: string;
 }
 
@@ -16,7 +16,6 @@ const emit = defineEmits<{
   (e: 'toggleMobileNav'): void;
   (e: 'updateSearch', query: string): void;
   (e: 'selectTab', tab: string): void;
-  (e: 'navigate', view: ViewMode): void;
 }>();
 
 const activeScopeTab = ref('Active Units');
@@ -45,13 +44,12 @@ function handleTabClick(tab: string) {
       </button>
 
       <!-- Brand (shown when sidebar is hidden on small screens) -->
-      <button
-        @click="emit('navigate', 'home')"
-        type="button"
+      <Link
+        href="/"
         class="lg:hidden flex items-center gap-2 text-left cursor-pointer"
       >
         <span class="text-lg font-black tracking-tighter text-on-surface">TALOS</span>
-      </button>
+      </Link>
 
       <!-- Scope Navigation Links (Sectors, Active Units, Telemetry) -->
       <nav class="hidden md:flex h-full items-center gap-6">
