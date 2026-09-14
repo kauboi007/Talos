@@ -61,16 +61,17 @@ def find_conflict(path_a,path_b):
                 i+=1
                 j+=1
             else:
-                ep1=path_a[-1][0]
-                ep2=path_b[-1][0]
-                sp1=path_a[0][0]
-                sp2=path_b[0][0]
+                ep1=path_a[-1][0] #end point of path a
+                ep2=path_b[-1][0] #end point of path b
+                sp1=path_a[0][0] #starting point of path a
+                sp2=path_b[0][0] #starting point of path b
+                #check if node is starting or ending point so that to avoid false flag
                 if((node1==ep1 and node2==ep2) or(node1==sp1 and node2==sp2 and ts1==ts2==0)):
                     i+=1
                     j+=1
                 else:
                     return (node1,node2,ts1)      
-    while(i<n):
+    while(i<n): #rest of the nodes in path a
         node1,ts1=path_a[i]
         if(ts1>ts2):
             if(node1!=node2):
@@ -84,7 +85,7 @@ def find_conflict(path_a,path_b):
                     i+=1
                 else:
                     return (node1,node2,ts1)
-    while(j<m):
+    while(j<m): #rest of the nodes in path b
         node2,ts2=path_b[j]
         if(ts1<ts2):
             if(node1!=node2):
@@ -98,4 +99,6 @@ def find_conflict(path_a,path_b):
                     j+=1
                 else:
                     return (node1,node2,ts2)
+
+
 
