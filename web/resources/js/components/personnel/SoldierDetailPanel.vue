@@ -49,10 +49,14 @@ function handleDownload() {
         <div class="w-20 h-24 bg-surface border border-tertiary-fixed-dim rounded p-1 flex-shrink-0">
           <div class="w-full h-full bg-surface-variant rounded-xs overflow-hidden">
             <img
+              v-if="props.soldier.avatarUrl"
               :src="props.soldier.avatarUrl"
               :alt="props.soldier.name"
               class="w-full h-full object-cover grayscale opacity-90 mix-blend-screen"
             />
+            <span v-else class="flex h-full items-center justify-center text-outline text-xs font-mono-data">
+              NO IMAGE
+            </span>
           </div>
         </div>
 

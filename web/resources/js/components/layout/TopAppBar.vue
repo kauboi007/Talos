@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
 import Icon from '@/components/common/Icon.vue';
+import { logout as logoutRoute } from '@/routes';
 
 interface Props {
   currentView?: string;
@@ -21,12 +22,17 @@ const emit = defineEmits<{
 const activeScopeTab = ref('Active Units');
 const scopeTabs = ['Sectors', 'Active Units', 'Telemetry'];
 
-const officerAvatar =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuC53vu3p9ppwOx1KwS7XoLOJ5kS3ylIluUsD_uuuCDH7s6OGfeYpQzVJ7FCrzIoQEoLnSEmZts1a5wAwwqvoLlobN848XD1s_1r2WQHAYYNj1JQD4zVfeDeGHPL-RR5GiKerTw-pZK1Fq0hxxKRFdAh1eWRNOrSy6EUQ12G6rXGlpv9HisW9H79dENO5OrF3LMkJpAVMO7bjnA27h2KaKoNwaoKR7WdV0vNoRdFvtk1R30xY9HA5cAryA';
+const page = usePage();
+const logoutForm = useForm({});
+const currentUser = computed(() => (page.props.auth as { user?: { name?: string } }).user);
 
 function handleTabClick(tab: string) {
   activeScopeTab.value = tab;
   emit('selectTab', tab);
+}
+
+function logout() {
+  logoutForm.submit(logoutRoute.post());
 }
 </script>
 
@@ -110,16 +116,19 @@ function handleTabClick(tab: string) {
           <Icon name="shield" size="20" />
         </button>
 
-        <button
-          class="p-1 hover:bg-surface-variant rounded-full transition-colors active:scale-95 ml-1"
-          title="Operator Profile"
-        >
-          <img
-            :src="officerAvatar"
-            alt="Commanding Officer Avatar"
-            class="w-8 h-8 rounded-full object-cover border border-outline-variant"
-          />
-        </button>
+        <div class="hidden xl:block text-right">
+          <p class="text-xs font-semibold text-on-surface">
+            {{ currentUser?.name }}
+          </p>
+          <button
+            type="button"
+            class="text-[10px] uppercase tracking-wider text-outline hover:text-tertiary"
+            :disabled="logoutForm.processing"
+            @click="logout"
+          >
+            {{ logoutForm.processing ? 'Closing...' : 'Log out' }}
+          </button>
+        </div>
       </div>
     </div>
   </header>

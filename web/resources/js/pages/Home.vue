@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
 import Icon from "@/components/common/Icon.vue";
 import TalosLogo from "@/components/common/TalosLogo.vue";
-import TacticalBadge from "@/components/common/TacticalBadge.vue";
-import { Link } from "@inertiajs/vue3";
+import { Form, Link, usePage } from "@inertiajs/vue3";
+import { dashboard, login, logs, logout, personnel, routing } from "@/routes";
 
-const currentTimeZulu = ref("");
-let timer: any = null;
+const page = usePage();
+const currentUser = computed(() => page.props.auth?.user);
+const currentTimeIst = ref("");
+let timer: ReturnType<typeof setInterval> | undefined;
 
 function updateClock() {
-  const now = new Date();
-  currentTimeZulu.value = now.toISOString().slice(11, 19) + " ZULU";
+  currentTimeIst.value =
+    new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(new Date()) + " IST";
 }
 
 onMounted(() => {
@@ -29,8 +37,7 @@ const quickAccessModules = [
     desc:
       "Live operational metrics, sector deployment summary, and system telemetry heartbeat.",
     icon: "dashboard",
-    href: "/dashboard",
-    meta: "4 Sectors Active",
+    href: dashboard().url,
     accent: "border-outline-variant hover:border-tertiary",
     iconColor: "text-tertiary",
   },
@@ -40,8 +47,7 @@ const quickAccessModules = [
     desc:
       "Personnel rosters, Neo4j command hierarchy graphs, specialization matrix, and logistics.",
     icon: "groups",
-    href: "/personnel",
-    meta: "1,204 Deployed Units",
+    href: personnel().url,
     accent: "border-outline-variant hover:border-secondary",
     iconColor: "text-secondary",
   },
@@ -51,8 +57,7 @@ const quickAccessModules = [
     desc:
       "Conflict-Based Search (CBS V4.1), topographical vector maps, and secure corridor pathfinding.",
     icon: "route",
-    href: "/routing",
-    meta: "Tamil Nadu Sector 4",
+    href: routing().url,
     accent: "border-outline-variant hover:border-tertiary",
     iconColor: "text-tertiary",
   },
@@ -62,8 +67,7 @@ const quickAccessModules = [
     desc:
       "Real-time telemetry event streams, cryptographic handshakes, and perimeter alert audits.",
     icon: "database",
-    href: "/logs",
-    meta: "Stream Live (Node 7A)",
+    href: logs().url,
     accent: "border-outline-variant hover:border-[#4ade80]",
     iconColor: "text-[#4ade80]",
   },
@@ -132,7 +136,7 @@ const capabilities = [
           <span
             class="font-mono-data text-xs uppercase tracking-widest text-[#4ade80] font-bold"
           >
-            DEFENSE DEFCON LEVEL: 4 (GUARDED)
+            CLASSIFIED DEFENSE ANALYTICS PLATFORM
           </span>
           <span class="text-outline hidden sm:inline">|</span>
           <span class="font-mono-data text-xs text-on-surface-variant hidden sm:inline">
@@ -142,9 +146,8 @@ const capabilities = [
 
         <div class="flex items-center gap-4">
           <div class="font-mono-data text-xs text-tertiary font-bold tracking-wider">
-            {{ currentTimeZulu }}
+            {{ currentTimeIst }}
           </div>
-          <TacticalBadge status="OPERATIONAL" size="sm" />
         </div>
       </div>
 
@@ -176,15 +179,27 @@ const capabilities = [
           <!-- Primary CTA Buttons -->
           <div class="flex flex-wrap items-center gap-4 pt-2">
             <Link
-              href="/login"
+              v-if="!currentUser"
+              :href="login().url"
               class="px-5 py-3 bg-tertiary text-on-tertiary rounded text-xs font-bold uppercase tracking-widest hover:bg-tertiary-fixed transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,185,95,0.3)] active:scale-95"
             >
               <Icon name="lock" size="18" />
               <span>LOGIN</span>
             </Link>
 
+            <Form v-else :action="logout().url" method="post" #default="{ processing }">
+              <button
+                type="submit"
+                :disabled="processing"
+                class="px-5 py-3 bg-tertiary text-on-tertiary rounded text-xs font-bold uppercase tracking-widest hover:bg-tertiary-fixed transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,185,95,0.3)] active:scale-95 disabled:opacity-50"
+              >
+                <Icon name="logout" size="18" />
+                <span>{{ processing ? "LOGGING OUT..." : "LOGOUT" }}</span>
+              </button>
+            </Form>
+
             <Link
-              href="/dashboard"
+              :href="dashboard().url"
               class="px-5 py-3 bg-surface-container-highest border border-tertiary/50 text-tertiary rounded text-xs font-bold uppercase tracking-widest hover:bg-tertiary/10 transition-colors flex items-center gap-2 active:scale-95"
             >
               <Icon name="dashboard" size="18" />
@@ -192,7 +207,7 @@ const capabilities = [
             </Link>
 
             <Link
-              href="/routing"
+              :href="routing().url"
               class="px-4 py-3 bg-transparent border border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
             >
               <Icon name="map" size="18" />
@@ -212,69 +227,6 @@ const capabilities = [
             <span>UPLINK: SECURE_V9</span>
             <span class="text-tertiary">CIPHER: AES-256-MIL</span>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Live Telemetry Status Ticker -->
-    <div class="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div
-        class="bg-surface-container border border-outline-variant p-4 rounded flex flex-col"
-      >
-        <span
-          class="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider"
-          >Missions In Flight</span
-        >
-        <div class="flex items-baseline gap-2 mt-1">
-          <span class="text-2xl lg:text-3xl font-bold text-on-surface font-mono-data"
-            >5</span
-          >
-          <span class="text-xs text-tertiary font-mono-data">7</span>
-        </div>
-      </div>
-
-      <div
-        class="bg-surface-container border border-outline-variant p-4 rounded flex flex-col"
-      >
-        <span
-          class="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider"
-          >Force Readiness</span
-        >
-        <div class="flex items-baseline gap-2 mt-1">
-          <span class="text-2xl lg:text-3xl font-bold text-on-surface font-mono-data"
-            >12</span
-          >
-          <span class="text-xs text-on-surface-variant font-mono-data">Troops</span>
-        </div>
-      </div>
-
-      <div
-        class="bg-surface-container border border-outline-variant p-4 rounded flex flex-col"
-      >
-        <span
-          class="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider"
-          >Perimeter Checkpoints</span
-        >
-        <div class="flex items-baseline gap-2 mt-1">
-          <span class="text-2xl lg:text-3xl font-bold text-on-surface font-mono-data"
-            >7%</span
-          >
-          <span class="text-xs text-[#4ade80] font-mono-data">Secured</span>
-        </div>
-      </div>
-
-      <div
-        class="bg-surface-container border border-outline-variant p-4 rounded flex flex-col"
-      >
-        <span
-          class="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider"
-          >Global Sector Threat</span
-        >
-        <div class="flex items-baseline gap-2 mt-1">
-          <span class="text-2xl lg:text-3xl font-bold text-[#4ade80] font-mono-data"
-            >5</span
-          >
-          <span class="text-xs text-on-surface-variant font-mono-data">Sector Alpha</span>
         </div>
       </div>
     </div>
@@ -328,12 +280,6 @@ const capabilities = [
             </p>
           </div>
 
-          <div
-            class="mt-5 pt-3 border-t border-outline-variant/60 flex items-center justify-between font-mono-data text-[11px]"
-          >
-            <span class="text-outline uppercase">Scope</span>
-            <span class="text-on-surface font-semibold">{{ mod.meta }}</span>
-          </div>
         </Link>
       </div>
     </div>
@@ -373,99 +319,5 @@ const capabilities = [
       </div>
     </div>
 
-    <!-- Active High-Priority Incidents & Active Corridors Snapshot -->
-    <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Active Corridors Quick Preview -->
-      <div
-        class="bg-surface-container border border-outline-variant rounded p-5 flex flex-col justify-between"
-      >
-        <div>
-          <div
-            class="flex justify-between items-center mb-3 border-b border-outline-variant pb-2"
-          >
-            <div class="flex items-center gap-2">
-              <Icon name="alt_route" size="18" class="text-tertiary" />
-              <h3 class="font-bold text-xs uppercase tracking-wider text-on-surface">
-                Active Tactical Corridors
-              </h3>
-            </div>
-            <button
-              type="button"
-              class="text-tertiary text-[11px] font-mono-data uppercase hover:underline"
-            >
-              Open Pathfinder &rarr;
-            </button>
-          </div>
-
-          <div class="space-y-2">
-            <!-- <div
-              v-for="c in props.corridors.slice(0, 3)"
-              :key="c.id"
-              class="p-2.5 bg-surface border border-outline-variant rounded flex items-center justify-between text-xs"
-            >
-              <div class="flex flex-col">
-                <span class="font-mono-data font-bold text-on-surface">{{ c.code }}</span>
-                <span class="text-[11px] text-on-surface-variant">{{ c.description }}</span>
-              </div>
-              <TacticalBadge :status="c.status" size="sm" />
-            </div> -->
-          </div>
-        </div>
-
-        <div
-          class="mt-4 pt-3 border-t border-outline-variant/60 flex justify-between font-mono-data text-[10px] text-outline"
-        >
-          <span>CBS V4.1 ENGINE</span>
-          <span class="text-tertiary">ZERO ROUTE CONFLICTS</span>
-        </div>
-      </div>
-
-      <!-- Recent Threat Events Snapshot -->
-      <div
-        class="bg-surface-container border border-outline-variant rounded p-5 flex flex-col justify-between"
-      >
-        <div>
-          <div
-            class="flex justify-between items-center mb-3 border-b border-outline-variant pb-2"
-          >
-            <div class="flex items-center gap-2">
-              <Icon name="warning" size="18" class="text-error" />
-              <h3 class="font-bold text-xs uppercase tracking-wider text-on-surface">
-                Live Threat Intelligence Stream
-              </h3>
-            </div>
-            <button
-              type="button"
-              class="text-tertiary text-[11px] font-mono-data uppercase hover:underline"
-            >
-              All Events &rarr;
-            </button>
-          </div>
-
-          <div class="space-y-2">
-            <!-- <div
-              v-for="t in props.threatEvents.slice(0, 3)"
-              :key="t.id"
-              class="p-2.5 bg-surface border border-outline-variant rounded flex flex-col gap-1 text-xs"
-            >
-              <div class="flex justify-between items-center">
-                <span class="font-mono-data text-[11px] text-tertiary font-bold">{{ t.timeZulu }}</span>
-                <TacticalBadge :status="t.severity" size="sm" />
-              </div>
-              <p class="text-on-surface-variant text-[11px] leading-snug">
-                {{ t.description }}
-              </p>
-            </div> -->
-          </div>
-        </div>
-
-        <div
-          class="mt-4 pt-3 border-t border-outline-variant/60 flex justify-between font-mono-data text-[10px] text-outline"
-        >
-          <span>PERIMETER MONITORING</span>
-          <span class="text-[#4ade80]">DEFENSE SYSTEMS SYNCHRONIZED</span>
-        </div>
-      </div>
-    </div>
   </div>
 </template>

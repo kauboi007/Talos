@@ -13,6 +13,32 @@ class OfficialProfileSeeder extends Seeder
      */
     public function run(): void
     {
+        OfficialProfile::query()
+            ->whereIn('service_number', [
+                'OFF-ARJUN-001',
+                'OFF-KARTHIK-002',
+                'OFF-DANIEL-003',
+                'OFF-MUKHUND-004',
+                'OFF-ABHINDANDHAN-005',
+                'OFF-MICHAEL-006',
+                'OFF-RAVI-007',
+                'OFF-SNEHA-008',
+            ])
+            ->delete();
+
+        User::query()
+            ->whereIn('service_id', [
+                'OFFICIAL-OFF-ARJUN-001',
+                'OFFICIAL-OFF-KARTHIK-002',
+                'OFFICIAL-OFF-DANIEL-003',
+                'OFFICIAL-OFF-MUKHUND-004',
+                'OFFICIAL-OFF-ABHINDANDHAN-005',
+                'OFFICIAL-OFF-MICHAEL-006',
+                'OFFICIAL-OFF-RAVI-007',
+                'OFFICIAL-OFF-SNEHA-008',
+            ])
+            ->delete();
+
         $officials = [
             ['service_number' => 'IC-742381', 'name' => 'Arjun Rao', 'rank' => 'colonel', 'rank_val' => 3],
             ['service_number' => 'IC-618204', 'name' => 'Karthik Singh', 'rank' => 'lieutenant', 'rank_val' => 1],

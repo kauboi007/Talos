@@ -19,8 +19,7 @@ const emit = defineEmits<{
   (e: 'download', soldier: Soldier): void;
 }>();
 
-// Selected soldier (defaults to SGT Reyes, J. TX-8812 to match Image 9)
-const selectedSoldierId = ref('TX-8812');
+const selectedSoldierId = ref(props.soldiers[0]?.id ?? '');
 const activeFilter = ref<'ALL' | 'ACTIVE' | 'DEFER' | 'STANDBY'>('ALL');
 const showFilterDropdown = ref(false);
 

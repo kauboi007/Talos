@@ -13,6 +13,10 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        User::query()
+            ->whereIn('service_id', ['OPR-COMMANDER-01'])
+            ->delete();
+
         $user = User::query()
             ->where('service_id', 'IC-000001')
             ->orWhere('name', 'Talos Commander')

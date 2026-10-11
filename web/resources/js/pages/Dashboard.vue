@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
+import { personnel } from "@/routes";
 
 import type {
   MetricSummary,
@@ -7,13 +8,6 @@ import type {
   TelemetryNode,
   ThreatEvent,
 } from "@/types";
-
-import {
-  initialMetrics,
-  deploymentRecords as defaultDeploymentRecords,
-  telemetryNodes as defaultTelemetryNodes,
-  threatEvents as defaultThreatEvents,
-} from "@/data/mockData";
 
 import MetricCardsGrid from "@/components/dashboard/MetricCardsGrid.vue";
 import DeploymentStatusTable from "@/components/dashboard/DeploymentStatusTable.vue";
@@ -28,10 +22,15 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  metrics: () => initialMetrics,
-  deploymentRecords: () => defaultDeploymentRecords,
-  telemetryNodes: () => defaultTelemetryNodes,
-  threatEvents: () => defaultThreatEvents,
+  metrics: () => ({
+    activeMissions: { count: 0, delta: "Awaiting mission data" },
+    troopDeployment: { count: 0, label: "Military Officials" },
+    threatLevel: { level: "UNAVAILABLE", sectorDetail: "Threat data pending" },
+    checkpointStatus: { percentage: 0, label: "Awaiting checkpoint data" },
+  }),
+  deploymentRecords: () => [],
+  telemetryNodes: () => [],
+  threatEvents: () => [],
 });
 </script>
 
@@ -46,7 +45,7 @@ const props = withDefaults(defineProps<Props>(), {
       <div class="lg:col-span-2 space-y-6">
         <DeploymentStatusTable :records="props.deploymentRecords" />
 
-        <Link href="/personnel" class="text-sm text-primary hover:underline">
+        <Link :href="personnel().url" class="text-sm text-primary hover:underline">
           View All Personnel
         </Link>
       </div>

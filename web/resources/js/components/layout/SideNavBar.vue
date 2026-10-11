@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import Icon from '@/components/common/Icon.vue';
+import { dashboard, home, login, logs, personnel, routing, settings } from '@/routes';
 
 type ViewMode = 'home' | 'dashboard' | 'personnel' | 'routing' | 'map' | 'logs' | 'settings' | 'support' | 'login';
 
@@ -25,12 +26,12 @@ const officerAvatar =
     'https://lh3.googleusercontent.com/aida-public/AB6AXuC53vu3p9ppwOx1KwS7XoLOJ5kS3ylIluUsD_uuuCDH7s6OGfeYpQzVJ7FCrzIoQEoLnSEmZts1a5wAwwqvoLlobN848XD1s_1r2WQHAYYNj1JQD4zVfeDeGHPL-RR5GiKerTw-pZK1Fq0hxxKRFdAh1eWRNOrSy6EUQ12G6rXGlpv9HisW9H79dENO5OrF3LMkJpAVMO7bjnA27h2KaKoNwaoKR7WdV0vNoRdFvtk1R30xY9HA5cAryA';
 
 const navItems: { view: ViewMode; label: string; icon: string; href: string }[] = [
-    { view: 'home', label: 'Overview', icon: 'home', href: '/' },
-    { view: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
-    { view: 'personnel', label: 'Personnel', icon: 'groups', href: '/personnel' },
-    { view: 'routing', label: 'Mission Routing', icon: 'route', href: '/routing' },
+    { view: 'home', label: 'Overview', icon: 'home', href: home().url },
+    { view: 'dashboard', label: 'Dashboard', icon: 'dashboard', href: dashboard().url },
+    { view: 'personnel', label: 'Personnel', icon: 'groups', href: personnel().url },
+    { view: 'routing', label: 'Mission Routing', icon: 'route', href: routing().url },
     { view: 'map', label: 'Map', icon: 'map', href: '/map' },
-    { view: 'logs', label: 'Logs', icon: 'database', href: '/logs' },
+    { view: 'logs', label: 'Logs', icon: 'database', href: logs().url },
 ];
 
 const activeComponent = computed(() => page.component);
@@ -62,7 +63,7 @@ function closeMobileNav() {
         >
             <div class="p-6 border-b border-outline-variant">
                 <Link
-                    href="/"
+                    :href="home().url"
                     @click="closeMobileNav"
                     class="flex items-center gap-3 mb-5 text-left w-full group cursor-pointer"
                 >
@@ -105,7 +106,7 @@ function closeMobileNav() {
 
             <div class="border-t border-outline-variant py-2">
                 <Link
-                    href="/settings"
+                    :href="settings().url"
                     @click="closeMobileNav"
                     :class="[
                         'w-full flex items-center gap-4 px-4 py-3 text-sm text-left transition-colors duration-200',
@@ -127,7 +128,7 @@ function closeMobileNav() {
                 </button>
 
                 <Link
-                    href="/login"
+                    :href="login().url"
                     @click="closeMobileNav"
                     class="w-full flex items-center gap-4 px-4 py-2.5 text-xs text-left text-outline hover:text-tertiary hover:bg-surface-variant transition-colors"
                     title="Return to secure authentication gateway"

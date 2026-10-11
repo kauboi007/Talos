@@ -1,31 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { Form } from '@inertiajs/vue3';
 import TalosLogo from '../common/TalosLogo.vue';
 import Icon from '../common/Icon.vue';
-
-const emit = defineEmits<{
-  (e: 'login-success'): void;
-}>();
-
-const serviceId = ref('OPR-7702-ALPHA');
-const authKey = ref('••••••••••••');
-const isLoading = ref(false);
-const errorMsg = ref('');
-
-function handleSubmit() {
-  isLoading.value = true;
-  errorMsg.value = '';
-
-  setTimeout(() => {
-    isLoading.value = false;
-    emit('login-success');
-  }, 600);
-}
-
-function handleQuickFill() {
-  serviceId.value = 'OPR-COMMANDER-01';
-  authKey.value = 'SEC_KEY_VAL_99';
-}
+import { login } from '@/routes';
 </script>
 
 <template>
@@ -64,7 +41,13 @@ function handleQuickFill() {
         </p>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="flex flex-col gap-5">
+      <Form
+        :action="login().url"
+        method="post"
+        :reset-on-success="true"
+        #default="{ errors, processing }"
+        class="flex flex-col gap-5"
+      >
         <!-- Service ID Field -->
         <div class="flex flex-col gap-1.5">
           <label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center justify-between" for="service-id">
@@ -75,13 +58,16 @@ function handleQuickFill() {
             <Icon name="badge" size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant" />
             <input
               id="service-id"
-              v-model="serviceId"
+              name="service_id"
               type="text"
               autocomplete="off"
               spellcheck="false"
               placeholder="Enter Operator ID"
               class="w-full bg-surface-container-highest border border-outline-variant text-on-surface font-mono-data text-sm h-12 pl-10 pr-3 focus:outline-none focus:border-tertiary transition-colors placeholder:text-outline-variant"
             />
+            <p v-if="errors.service_id" class="text-xs text-error mt-1">
+              {{ errors.service_id }}
+            </p>
           </div>
         </div>
 
@@ -95,24 +81,27 @@ function handleQuickFill() {
             <Icon name="key" size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant" />
             <input
               id="auth-key"
-              v-model="authKey"
+              name="auth_key"
               type="password"
               placeholder="Enter Secure Key"
               class="w-full bg-surface-container-highest border border-outline-variant text-on-surface font-mono-data text-sm h-12 pl-10 pr-3 focus:outline-none focus:border-tertiary transition-colors placeholder:text-outline-variant"
             />
+            <p v-if="errors.auth_key" class="text-xs text-error mt-1">
+              {{ errors.auth_key }}
+            </p>
           </div>
         </div>
 
         <!-- Submit Action Button -->
         <button
           type="submit"
-          :disabled="isLoading"
+          :disabled="processing"
           class="mt-2 w-full h-12 bg-tertiary text-on-tertiary font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-tertiary-fixed transition-colors active:scale-[0.98] shadow-[0_0_12px_rgba(255,185,95,0.3)] disabled:opacity-50"
         >
           <Icon name="login" size="18" />
-          <span>{{ isLoading ? 'Verifying Cipher...' : 'Execute Authentication' }}</span>
+          <span>{{ processing ? 'Verifying Cipher...' : 'Execute Authentication' }}</span>
         </button>
-      </form>
+      </Form>
     </div>
 
     <!-- Card Footer -->
@@ -125,15 +114,9 @@ function handleQuickFill() {
         <span class="opacity-50">NODE_7A</span>
       </div>
 
-      <div class="text-center">
-        <button
-          @click="handleQuickFill"
-          type="button"
-          class="text-xs text-outline hover:text-tertiary font-mono-data transition-colors underline uppercase tracking-wider"
-        >
-          Trouble Logging In? Contact SEC-OPS (Quick Access)
-        </button>
-      </div>
+      <p class="text-center text-xs text-outline font-mono-data uppercase tracking-wider">
+        Access is provisioned by SEC-OPS. No self-registration is available.
+      </p>
     </div>
 
     <!-- Bottom decorative corners -->

@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Filter,
   LogIn,
+  LogOut,
   Home,
   CheckCircle2,
   ArrowRight,
@@ -46,7 +47,7 @@ import {
 interface Props {
   name: string;
   size?: number | string;
-  class?: string;
+  class?: string | string[] | Record<string, boolean>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -88,6 +89,7 @@ const iconMap: Record<string, any> = {
   chevron_right: ChevronRight,
   filter_list: Filter,
   login: LogIn,
+  logout: LogOut,
   check: CheckCircle2,
   arrow_forward: ArrowRight,
   description: FileText,
