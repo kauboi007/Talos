@@ -14,6 +14,7 @@
         "laravel/tinker": "^3.0",
         "livewire/blaze": "^1.0",
         "livewire/livewire": "^4.1",
+        "mallardduck/blade-lucide-icons": "^2.0",
         "mongodb/laravel-mongodb": "*"
     },
     "require-dev": {
@@ -49,7 +50,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "@php artisan serve"
+            "foreman start"
         ],
         "lint": [
             "pint --parallel"

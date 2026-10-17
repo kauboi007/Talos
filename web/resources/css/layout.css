@@ -1,0 +1,60 @@
+/* Layout and Structure Rules */
+
+.tactical-sidebar {
+  width: var(--sidebar-width);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-outline-variant);
+}
+
+.tactical-topbar {
+  height: 64px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: var(--sidebar-width);
+  z-index: 40;
+  background-color: var(--color-surface-container);
+  border-bottom: 1px solid var(--color-outline-variant);
+}
+
+@media (max-width: 1024px) {
+  .tactical-topbar {
+    left: 0;
+  }
+}
+
+.tactical-main-content {
+  margin-top: 64px;
+  min-height: calc(100vh - 64px);
+  background-color: var(--color-surface);
+}
+
+@media (min-width: 1025px) {
+  .tactical-main-content {
+    margin-left: var(--sidebar-width);
+  }
+}
+
+/* Custom Tactical Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-dim);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-variant);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-outline-variant);
+}
