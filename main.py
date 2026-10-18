@@ -1,6 +1,7 @@
 from db import neo4jconnection
 from data_loader import get_coords,get_subgraph
 from pathfinding import astar,find_conflict
+from high_level_cbs import cbs
 
 #connection
 conn=neo4jconnection("neo4j://127.0.0.1:7687","neo4j","talossys")
@@ -11,9 +12,7 @@ coords=get_coords(conn)
 #get subgraph
 subgraph=get_subgraph(conn)
 
-path1,cost1=astar('tambaram','avadi',subgraph,coords)
-path2,cost2=astar('tambaram','ennore',subgraph,coords)
-
-find_conflict(path1,path2)
+troops = {"t1": ("st_thomas_mount", "ramanathapuram"), "t2": ("chengalpet", "wellington")}
+print(cbs(troops,subgraph,coords))
 
 

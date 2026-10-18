@@ -99,6 +99,7 @@ def find_conflict(path_a,path_b):
                     j+=1
                 else:
                     return (node1,node2,ts2)
+    return None
 
 
 
