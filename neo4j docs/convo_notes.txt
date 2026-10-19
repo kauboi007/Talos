@@ -1,0 +1,2 @@
+python http server to communicate with laravel for all cbs and everything
+handles could be many for redis queue
