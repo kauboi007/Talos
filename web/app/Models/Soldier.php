@@ -12,6 +12,13 @@ class Soldier extends Model
 
     public $incrementing = 'false';
 
+    protected function casts(): array
+    {
+        return [
+            'dob' => 'date',
+        ];
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
