@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Foundation\DevCommand;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
