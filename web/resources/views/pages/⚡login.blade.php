@@ -1,11 +1,43 @@
 <?php
 
+use App\Models\Soldier;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts::auth'), Title('TALOS — Restricted Access')]
+new #[Layout('layouts::auth'), Title('Login')]
 class extends Component {
+    public string $serviceId = '';
+
+    public string $password = '';
+
+    public function mount(): void
+    {
+        if (Auth::check())
+            $this->redirectRoute('dashboard');
+    }
+
+    public function authenticate(): void
+    {
+        $validated = $this->validate([
+            'serviceId' => ['required', 'string', 'max:32'],
+            'password' => ['required', 'string', 'max:128'],
+        ]);
+
+        $soldier = Soldier::where('service_id', $validated['serviceId'])->first();
+        $user = $soldier?->user;
+
+        if (!$user || !Hash::check($validated['password'], $user->password))
+            throw ValidationException::withMessages(['serviceId' => 'Invalid Service ID or Authorization Key.']);
+
+        Auth::login($user);
+        request()->session()->regenerate();
+
+        $this->redirectIntended(default: route('dashboard', absolute: false));
+    }
 };
 ?>
 
@@ -40,7 +72,7 @@ class extends Component {
             </p>
         </div>
 
-        <form @submit.prevent class="flex flex-col gap-5">
+        <form wire:submit="authenticate" class="flex flex-col gap-5">
 
             <div class="flex flex-col gap-1.5">
                 <label for="service-id" class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex justify-between">
@@ -53,11 +85,17 @@ class extends Component {
                     <input
                         id="service-id"
                         type="text"
-                        autocomplete="off"
+                        wire:model="serviceId"
+                        autocomplete="username"
                         spellcheck="false"
                         placeholder="Enter Operator ID"
                         class="w-full bg-surface-container-highest border border-outline-variant text-on-surface font-mono-data text-sm h-12 pl-10 pr-3 focus:outline-none focus:border-tertiary transition-colors placeholder:text-outline-variant"
                     >
+                    @error('serviceId')
+                        <p class="text-xs text-error mt-1" role="alert">
+                            {{ $message }}
+                        </p>
+                    @enderror
                 </div>
             </div>
 
@@ -71,20 +109,41 @@ class extends Component {
                     <x-lucide-key-round class="absolute left-3 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-outline-variant" />
                     <input
                         id="auth-key"
+                        wire:model="password"
                         type="password"
                         autocomplete="off"
                         placeholder="Enter Secure Key"
                         class="w-full bg-surface-container-highest border border-outline-variant text-on-surface font-mono-data text-sm h-12 pl-10 pr-3 focus:outline-none focus:border-tertiary transition-colors placeholder:text-outline-variant"
                     >
+                    @error('password')
+                        <p class="text-xs text-error mt-1" role="alert">
+                            {{ $message }}
+                        </p>
+                    @enderror
                 </div>
+
             </div>
 
+
             <button
-                type="button"
-                class="mt-2 w-full h-12 bg-tertiary text-on-tertiary font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-tertiary-fixed transition-colors active:scale-[0.98] shadow-[0_0_12px_rgba(255,185,95,0.3)]"
+                type="submit"
+                wire:loading.attr="disabled"
+                class="mt-2 w-full h-12 bg-tertiary text-on-tertiary
+                       font-bold text-xs uppercase tracking-widest flex
+                       items-center justify-center gap-2 hover:bg-tertiary-fixed
+                       transition-colors active:scale-[0.98]
+                       shadow-[0_0_12px_rgba(255,185,95,0.3)]
+                       disabled:opacity-70 disabled:cursor-not-allowed"
             >
-                <x-lucide-log-in class="w-[18px] h-[18px]" />
-                <span>Execute Authentication</span>
+                <span class="inline-flex items-center justify-center gap-2 in-data-loading:hidden">
+                    <x-lucide-log-in class="w-[18px] h-[18px]" />
+                    <span>Execute Authentication</span>
+                </span>
+
+                <span class="hidden items-center justify-center gap-2 not-in-data-loading:hidden">
+                    <x-lucide-loader-circle class="w-[18px] h-[18px] animate-spin" />
+                    <span>Verifying Credentials...</span>
+                </span>
             </button>
         </form>
     </div>
@@ -97,10 +156,6 @@ class extends Component {
             </span>
             <span class="opacity-50">NODE_7A</span>
         </div>
-
-        <p class="text-center text-xs text-outline font-mono-data uppercase tracking-wider">
-            Access is provisioned by SEC-OPS. No self-registration is available.
-        </p>
     </footer>
 
     <div class="tech-corner-bl"></div>

@@ -4,7 +4,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('layouts::command'), Title('TALOS — Tactical Dashboard')]
+new #[Layout('layouts::command'), Title('Dashboard')]
 class extends Component {
     public array $metrics = [
         [
@@ -95,7 +95,6 @@ class extends Component {
 ?>
 
 <div class="p-4 md:p-6 space-y-6">
-
     {{-- Demo-data notice --}}
     <div class="flex items-center gap-2 px-3 py-2 border border-tertiary/30 bg-tertiary/5 text-tertiary font-mono-data text-[10px] uppercase tracking-wider">
         <x-lucide-flask-conical class="w-4 h-4 shrink-0" />

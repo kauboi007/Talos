@@ -6,45 +6,6 @@ use Livewire\Component;
 
 new #[Layout('layouts::app'), Title('Home')]
 class extends Component {
-    public array $quickAccessModules = [
-        [
-            'id' => 'dashboard',
-            'title' => 'Tactical Dashboard',
-            'desc' => 'Live operational metrics, sector deployment summary, and system telemetry heartbeat.',
-            'icon' => 'layout-dashboard',
-            'href' => '/dashboard',
-            'accent' => 'border-outline-variant hover:border-tertiary',
-            'iconColor' => 'text-tertiary',
-        ],
-        [
-            'id' => 'personnel',
-            'title' => 'Personnel Registry',
-            'desc' => 'Personnel rosters, Neo4j command hierarchy graphs, specialization matrix, and logistics.',
-            'icon' => 'users',
-            'href' => '/personnel',
-            'accent' => 'border-outline-variant hover:border-secondary',
-            'iconColor' => 'text-secondary',
-        ],
-        [
-            'id' => 'routing',
-            'title' => 'Mission Routing & Map',
-            'desc' => 'Conflict-Based Search (CBS V4.1), topographical vector maps, and secure corridor pathfinding.',
-            'icon' => 'route',
-            'href' => '/routing',
-            'accent' => 'border-outline-variant hover:border-tertiary',
-            'iconColor' => 'text-tertiary',
-        ],
-        [
-            'id' => 'logs',
-            'title' => 'SEC-OPS Audit Logs',
-            'desc' => 'Real-time telemetry event streams, cryptographic handshakes, and perimeter alert audits.',
-            'icon' => 'database',
-            'href' => '/logs',
-            'accent' => 'border-outline-variant hover:border-[#4ade80]',
-            'iconColor' => 'text-[#4ade80]',
-        ],
-    ];
-
     public array $capabilities = [
         [
             'title' => 'Conflict-Based Search (CBS)',
@@ -98,12 +59,6 @@ class extends Component {
 
                 <span class="font-mono-data text-xs uppercase tracking-widest text-[#4ade80] font-bold">
                     CLASSIFIED DEFENSE ANALYTICS PLATFORM
-                </span>
-
-                <span class="text-outline hidden sm:inline">|</span>
-
-                <span class="font-mono-data text-xs text-on-surface-variant hidden sm:inline">
-                    NODE: STRAT-CMD-7A
                 </span>
             </div>
 
@@ -163,6 +118,7 @@ class extends Component {
                     @auth
                         <form action="{{ route('logout') }}" method="POST">
                             @csrf
+                            @method('DELETE')
                             <button
                                 type="submit"
                                 class="px-5 py-3 bg-tertiary text-on-tertiary rounded text-xs font-bold uppercase tracking-widest hover:bg-tertiary-fixed transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(255,185,95,0.3)] active:scale-95"
@@ -181,14 +137,16 @@ class extends Component {
                         <span>GO TO DASHBOARD</span>
                     </a>
 
-                    <a
-                        {{-- href="{{ route('routing') }}" --}}
-                        href="/routing"
-                        class="px-4 py-3 bg-transparent border border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
-                    >
-                        <x-lucide-map class="w-[18px] h-[18px]" />
-                        <span>VIEW TACTICAL MAP</span>
-                    </a>
+                    @auth
+                        <a
+                            {{-- href="{{ route('routing') }}" --}}
+                            href="/routing"
+                            class="px-4 py-3 bg-transparent border border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
+                        >
+                            <x-lucide-map class="w-[18px] h-[18px]" />
+                            <span>VIEW TACTICAL MAP</span>
+                        </a>
+                    @endauth
 
                 </div>
             </div>
@@ -202,59 +160,6 @@ class extends Component {
                     <span class="text-tertiary">CIPHER: AES-256-MIL</span>
                 </div>
             </div>
-
-        </div>
-    </div>
-
-    {{-- Operational core modules --}}
-    <div class="relative z-10 space-y-4">
-
-        <div class="flex flex-wrap justify-between items-end gap-2 border-b border-outline-variant pb-2">
-            <div>
-                <h2 class="text-lg font-bold text-on-surface uppercase tracking-wider">
-                    Command Center Modules
-                </h2>
-                <p class="text-xs text-on-surface-variant font-mono-data">
-                    Direct access to real-time defense subsystems
-                </p>
-            </div>
-
-            <span class="font-mono-data text-xs text-tertiary">
-                4 SUBSYSTEMS ONLINE
-            </span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-            @foreach ($quickAccessModules as $module)
-                <a
-                    href="{{ $module['href'] }}"
-                    wire:key="{{ $module['id'] }}"
-                    class="bg-surface-container border rounded p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 group hover:bg-surface-variant/30 hover:-translate-y-0.5 {{ $module['accent'] }}"
-                >
-                    <div>
-                        <div class="flex items-center justify-between mb-3">
-
-                            <div class="w-10 h-10 rounded bg-surface-container-high border border-outline-variant flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <x-dynamic-component
-                                    :component="'lucide-' . $module['icon']"
-                                    class="w-[22px] h-[22px] {{ $module['iconColor'] }}"
-                                />
-                            </div>
-
-                            <x-lucide-arrow-right class="w-[14px] h-[14px] text-outline group-hover:text-on-surface group-hover:translate-x-1 transition-all" />
-                        </div>
-
-                        <h3 class="font-bold text-sm text-on-surface group-hover:text-tertiary transition-colors uppercase tracking-wide">
-                            {{ $module['title'] }}
-                        </h3>
-
-                        <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">
-                            {{ $module['desc'] }}
-                        </p>
-                    </div>
-                </a>
-            @endforeach
 
         </div>
     </div>
