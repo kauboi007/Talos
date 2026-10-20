@@ -55,13 +55,17 @@ def make_child(parent,troop_id,ban,graph,coords,start,goal):
     cost=sum(local_cpn.values())
     return treenode(local_paths,cost,local_cons,local_cpn)
 
-def cbs(troops,graph,coords):
+def cbs(troops,graph,coords,limit=5000):
     #build root , push cost id node into heap
     #while heap is not empty pop run find first conflict if its none return the paths
     #else make 2 children :)
     root_node=build_root(troops,graph,coords)
     heap=[root_node]
+    currexp=0
     while heap:
+        currexp+=1
+        if currexp>limit:
+            return None
         node=heapq.heappop(heap)
         x=find_first_conflict(node)
         if(x is None):

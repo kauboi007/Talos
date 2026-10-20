@@ -1,6 +1,8 @@
 import math
 import heapq
 
+waitcost=1
+
 def haversine(lat1,lng1,lat2,lng2): 
     r=6371
     lat1,lng1,lat2,lng2=map(math.radians,[lat1,lng1,lat2,lng2])
@@ -21,9 +23,14 @@ def astar(start, goal, graph, coords, constraints=None):
     open_set = [(0, start, 0)]       
     g_score = {(start, 0): 0}
     came_from = {}
+    n=len(graph.keys())
+    t=max((x[1] for x in constraints),default=0)
+    goalfree=max((x[1] for x in constraints if x[0]==goal),default=-1)
     while open_set:
         current_f, current, current_ts = heapq.heappop(open_set)
-        if current == goal:
+        if current_ts>t+n:
+            continue
+        if current == goal and current_ts>goalfree:
             path = [(current, current_ts)]
             state = (current, current_ts)
             while state in came_from:
@@ -32,7 +39,7 @@ def astar(start, goal, graph, coords, constraints=None):
             path.reverse()
             return path, g_score[(current, current_ts)]
 
-        for neighbor, cost in graph[current]:
+        for neighbor, cost in graph[current]+[(current,waitcost)]:
             next_ts = current_ts + 1             
             if (neighbor, next_ts) in constraints: 
                 continue
@@ -101,5 +108,26 @@ def find_conflict(path_a,path_b):
                     return (node1,node2,ts2)
     return None
 
-
+def assess_threat(path, start, end, graph, coords, threats):
+    # 1) exposure: sum threat of each checkpoint the troop ENTERS.
+    exposure = 0
+    for i in range(1, len(path)):
+        node = path[i][0]
+        if node != path[i - 1][0]:
+            exposure += threats.get(node, 0)
+    # 2) nothing threatened on this route ,nothing to warn about
+    if exposure == 0:
+        return 0, False
+    # 3) a threatened goal can't be avoided, the troop must go there
+    if end in threats:
+        return exposure, True
+    # 4) otherwise: does a threat-free route exist
+    blocked = set(threats) - {start, end}
+    safe_graph = {
+        n: [(m, c) for m, c in nbrs if m not in blocked]
+        for n, nbrs in graph.items()
+        if n not in blocked
+    }
+    safe_path, cost = astar(start, end, safe_graph, coords)
+    return exposure, safe_path is None
 

@@ -3,6 +3,10 @@ from contextlib import asynccontextmanager
 from fastapi import Body, FastAPI, HTTPException, Response
 from neo4j import GraphDatabase
 from neo4j.exceptions import ConstraintError
+from pydantic import BaseModel
+from high_level_cbs import cbs
+from pathfinding import assess_threat
+from data_loader import get_subgraph, get_threats,get_coords
 
 URI = "neo4j://127.0.0.1:7687"
 AUTH = ("neo4j","talossys")
@@ -40,6 +44,7 @@ RESOURCES = { #this part is vibecoded:gave claude the schema of neo4j
         "fields": ["name", "type", "severity"],
         "required": ["name", "type", "severity"],
         "rels": {"affects_id": ("affects", "checkpoint", "out")},
+        "stamp":True,
         "extra": "timestamp: toString(n.timestamp)",
     },
 }
@@ -160,6 +165,8 @@ def register(res, cfg): #claude suggested that wrapping the endpoints inside of 
 
         def work(tx):
             tx.run(f"CREATE (n:{label} $props)", props=props)
+            if cfg.get("stamp"):
+                tx.run(f"MATCH (n:{label} {{id:$id}}) SET n.timestamp = datetime()", id=props["id"])
             set_rels(tx, cfg, props["id"], body)
             return fetch(tx, cfg, props["id"])
 
@@ -260,3 +267,61 @@ def delete_route(route_id: str):
 
     write(work)
     return Response(status_code=204)
+
+#plan api for cbs
+class TroopMission(BaseModel):
+    troop_id: str
+    start: str   # checkpoint NAME
+    end: str     # checkpoint NAME
+
+class PlanRequest(BaseModel):
+    troops: list[TroopMission]
+
+class _Conn:  # lets get_subgraph and et_threats (which expect conn.run_query) reuse this file's driver
+    def run_query(self, q):
+        return read(lambda tx: tx.run(q).data())
+
+
+@app.post("/api/plan")
+def plan(req: PlanRequest):
+    if not req.troops:
+        raise HTTPException(422, "no troops in request")
+
+    conn = _Conn()
+    graph = get_subgraph(conn)
+    coords = get_coords(conn)
+    threats = get_threats(conn)
+    known_troops = {r["id"]: r["name"] for r in read(lambda tx: tx.run("MATCH (t:troop) RETURN t.id AS id, t.name AS name").data())}
+
+    # validate everything before touching cbs
+    ids = [t.troop_id for t in req.troops]
+    if len(ids) != len(set(ids)):
+        raise HTTPException(422, "duplicate troop_id in request")
+    for t in req.troops:
+        if t.troop_id not in known_troops:
+            raise HTTPException(404, f"troop {t.troop_id} not found")
+        for cp in (t.start, t.end):
+            if cp not in graph or cp not in coords:
+                raise HTTPException(422, f"checkpoint '{cp}' unknown or has no routes (troop {t.troop_id})")
+
+    troops = {t.troop_id: (t.start, t.end) for t in req.troops}
+
+    try:
+        paths = cbs(troops, graph, coords)
+    except ValueError as e:                      # a troop has no route at all
+        return {"feasible": False, "reason": str(e), "plans": {}}
+    if paths is None:                            # search exhausted or hit the limit
+        return {"feasible": False, "reason": "no collision free plan found", "plans": {}}
+
+    plans = {}
+    for t in req.troops:
+        path = paths[t.troop_id]
+        exposure, unavoidable = assess_threat(path, t.start, t.end, graph, coords, threats)
+        plans[t.troop_id] = {
+            "troop_name": known_troops[t.troop_id],
+            "path": [{"checkpoint": n, "tick": ts} for n, ts in path],
+            "ticks": path[-1][1],
+            "threat_exposure": exposure,
+            "unavoidable_threat": unavoidable,
+        }
+    return {"feasible": True, "plans": plans}

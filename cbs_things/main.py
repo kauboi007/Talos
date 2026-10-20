@@ -1,5 +1,5 @@
 from db import neo4jconnection
-from data_loader import get_coords,get_subgraph
+from data_loader import get_coords,get_subgraph,get_threats
 from pathfinding import astar,find_conflict
 from high_level_cbs import cbs
 
@@ -13,6 +13,5 @@ coords=get_coords(conn)
 subgraph=get_subgraph(conn)
 
 troops = {"t1": ("st_thomas_mount", "ramanathapuram"), "t2": ("chengalpet", "wellington")}
-print(cbs(troops,subgraph,coords))
 
 
