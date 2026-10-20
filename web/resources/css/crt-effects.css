@@ -1,0 +1,128 @@
+/* Tactical Display CRT, Grid & Pulse Effects */
+
+.mesh-bg {
+  background-image:
+    linear-gradient(to right, rgba(69, 70, 77, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(69, 70, 77, 0.12) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.scanline {
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 185, 95, 0.5);
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: scanlineAnim 3.5s linear infinite;
+  box-shadow: 0 0 10px rgba(255, 185, 95, 0.8);
+  z-index: 20;
+  pointer-events: none;
+}
+
+@keyframes scanlineAnim {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.crt-flicker {
+  animation: crtFlickerAnim 0.18s infinite alternate;
+}
+
+@keyframes crtFlickerAnim {
+  0% {
+    opacity: 0.98;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.map-pulse {
+  animation: mapPulseAnim 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes mapPulseAnim {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(255, 185, 95, 0.7);
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+    box-shadow: 0 0 0 12px rgba(255, 185, 95, 0);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(255, 185, 95, 0);
+  }
+}
+
+.route-dash {
+  stroke-dasharray: 8;
+  animation: routeDashAnim 1.2s linear infinite;
+}
+
+@keyframes routeDashAnim {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+.tech-corner-tl {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid var(--color-tertiary);
+  border-left: 2px solid var(--color-tertiary);
+  pointer-events: none;
+}
+
+.tech-corner-tr {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid var(--color-tertiary);
+  border-right: 2px solid var(--color-tertiary);
+  pointer-events: none;
+}
+
+.tech-corner-bl {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-bottom: 2px solid var(--color-tertiary);
+  border-left: 2px solid var(--color-tertiary);
+  pointer-events: none;
+}
+
+.tech-corner-br {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-bottom: 2px solid var(--color-tertiary);
+  border-right: 2px solid var(--color-tertiary);
+  pointer-events: none;
+}
