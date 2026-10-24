@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+talos_neo4j_seed.cql
 # Distribution / packaging
 .Python
 build/

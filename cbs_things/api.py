@@ -1,58 +1,76 @@
+#code formatted by gemini - changes were reviewed and pushed
+
+import os
 import uuid
+import requests
 from contextlib import asynccontextmanager
 from fastapi import Body, FastAPI, HTTPException, Response
 from neo4j import GraphDatabase
 from neo4j.exceptions import ConstraintError
 from pydantic import BaseModel
+
 from high_level_cbs import cbs
 from pathfinding import assess_threat
-from data_loader import get_subgraph, get_threats,get_coords
+from data_loader import get_subgraph, get_threats, get_coords
 
-URI = "neo4j://127.0.0.1:7687"
-AUTH = ("neo4j","talossys")
-driver = GraphDatabase.driver(URI, auth=AUTH)
+URI = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
+USER = os.getenv("NEO4J_USER", "neo4j")
+PASSWORD = os.getenv("NEO4J_PASSWORD", "talossys")
+driver = GraphDatabase.driver(URI, auth=(USER, PASSWORD))
 
-RESOURCES = { #this part is vibecoded:gave claude the schema of neo4j
+
+LARAVEL_API_URL = os.getenv("LARAVEL_API_URL", "http://localhost:8000/api") #viewit
+
+RESOURCES = { #redid regarding the seed.cql file
     "officers": {
-        "label": "officer",
-        "fields": ["name", "rank", "rank_val", "status"],
-        "required": ["name", "rank"],
+        "label": "soldier",
+        "id_field": "service_id",
+        "fields": ["service_id", "status"],
+        "required": ["service_id"],
         "rels": {
-            "reports_to_id": ("reports_to", "officer", "out"),
+            "reports_to_id": ("reports_to", "soldier", "out"),
             "stationed_at_id": ("stationed_at", "checkpoint", "out"),
             "troop_id": ("belongs_to", "troop", "out"),
         },
     },
     "troops": {
         "label": "troop",
+        "id_field": "name",
         "fields": ["name", "status", "type", "head_count", "priority"],
         "required": ["name"],
         "rels": {
             "start_id": ("starts_at", "checkpoint", "out"),
             "end_id": ("ends_at", "checkpoint", "out"),
+            "escort_id": ("escorts", "soldier", "out"),
         },
     },
     "checkpoints": {
         "label": "checkpoint",
-        "fields": ["name", "status", "lat", "lng", "type"],
-        "required": ["name", "lat", "lng"],
+        "id_field": "checkpoint_code",
+        "fields": ["name", "checkpoint_code", "status", "lat", "lng", "type"],
+        "required": ["checkpoint_code", "name", "lat", "lng"],
         "rels": {},
         "extra": "threat_count: count{match(n)<-[:affects]-(:threatevent)}",
     },
     "threat-events": {
         "label": "threatevent",
+        "id_field": "name",
         "fields": ["name", "type", "severity"],
         "required": ["name", "type", "severity"],
         "rels": {"affects_id": ("affects", "checkpoint", "out")},
-        "stamp":True,
+        "stamp": True,
         "extra": "timestamp: toString(n.timestamp)",
     },
 }
 
 
-@asynccontextmanager #i was first using on_startup and on_shutdown but then i saw suggested  lifespan is better -kauboi007
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     with driver.session() as s:
+        s.run("MATCH (s:soldier) WHERE s.id IS NULL SET s.id = s.service_id")
+        s.run("MATCH (c:checkpoint) WHERE c.id IS NULL SET c.id = COALESCE(c.checkpoint_code, c.name)")
+        s.run("MATCH (t:troop) WHERE t.id IS NULL SET t.id = t.name")
+        s.run("MATCH (te:threatevent) WHERE te.id IS NULL SET te.id = te.name")
         for res in RESOURCES.values():
             try:
                 s.run(
@@ -60,21 +78,14 @@ async def lifespan(app: FastAPI):
                     f"FOR (n:{res['label']}) REQUIRE n.id IS UNIQUE"
                 )
             except Exception:
-                pass #change to print if we want to see the error else keep it this way but its not explicit -kauboi007
-        try:
-            s.run(
-                "CREATE CONSTRAINT checkpoint_name IF NOT EXISTS "
-                "FOR (n:checkpoint) REQUIRE n.name IS UNIQUE"
-            )
-        except Exception:
-            pass  #same as above comment -kauboi007
+                pass
     yield
     driver.close()
+
 
 app = FastAPI(title="talos", lifespan=lifespan)
 
 
-#helper fns
 def write(fn):
     try:
         with driver.session() as s:
@@ -82,11 +93,13 @@ def write(fn):
     except ConstraintError:
         raise HTTPException(409, "Duplicate value")
 
+
 def read(fn):
     with driver.session() as s:
         return s.execute_read(fn)
 
-def projection(cfg): #vibecoded - this lets you query the linked ids in 1 query instead of one query per link
+
+def projection(cfg):
     parts = [".*"]
     for key, (rel, tl, d) in cfg["rels"].items():
         pat = f"(n)-[:{rel}]->(x:{tl})" if d == "out" else f"(n)<-[:{rel}]-(x:{tl})"
@@ -96,7 +109,7 @@ def projection(cfg): #vibecoded - this lets you query the linked ids in 1 query 
     return "n{" + ", ".join(parts) + "}"
 
 
-def set_rels(tx, cfg, node_id, body): #vibecoded
+def set_rels(tx, cfg, node_id, body):
     label = cfg["label"]
     for key, (rel, tl, d) in cfg["rels"].items():
         if key not in body:
@@ -107,7 +120,7 @@ def set_rels(tx, cfg, node_id, body): #vibecoded
             id=node_id,
         )
         tid = body[key]
-        if tid is None:  # null = unlink
+        if tid is None:
             continue
         rec = tx.run(
             f"MATCH (n:{label} {{id:$id}}), (t:{tl} {{id:$tid}}) "
@@ -119,7 +132,7 @@ def set_rels(tx, cfg, node_id, body): #vibecoded
             raise HTTPException(404, f"{key}: no {tl} with id {tid}")
 
 
-def fetch(tx, cfg, node_id): #fetching the  node by id
+def fetch(tx, cfg, node_id):
     rec = tx.run(
         f"MATCH (n:{cfg['label']} {{id:$id}}) RETURN {projection(cfg)} AS item",
         id=node_id,
@@ -127,7 +140,21 @@ def fetch(tx, cfg, node_id): #fetching the  node by id
     return rec["item"] if rec else None
 
 
-#health check just checks if neo4j is reachable
+def fetch_all_troop_speeds_from_laravel():
+    url = f"{LARAVEL_API_URL.rstrip('/')}/troops/speeds"
+    try:
+        res = requests.get(url, timeout=4)
+        if res.status_code == 200:
+            data = res.json()
+            if isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        pass
+    return {}  
+
+#CRUD
+
 @app.get("/health")
 def health():
     try:
@@ -137,9 +164,14 @@ def health():
         raise HTTPException(503, f"neo4j unreachable: {e}")
 
 
-#crud apis
+@app.get("/api/troops/{troop_id}/speed")
+def get_troop_speed_endpoint(troop_id: str):
+    all_speeds = fetch_all_troop_speeds_from_laravel()
+    speed = all_speeds.get(troop_id, 50.0)
+    return {"troop_id": troop_id, "speed_kmh": speed}
 
-def register(res, cfg): #claude suggested that wrapping the endpoints inside of a fn is better instead of raw for loops so its has better scope resolution -kauboi007
+
+def register(res, cfg):
     label = cfg["label"]
     base = f"/api/{res}"
 
@@ -161,7 +193,7 @@ def register(res, cfg): #claude suggested that wrapping the endpoints inside of 
         if missing:
             raise HTTPException(422, f"Missing required fields: {missing}")
         props = {k: body[k] for k in cfg["fields"] if k in body}
-        props["id"] = str(uuid.uuid4())
+        props["id"] = body.get("id", body.get(cfg.get("id_field", "id"), str(uuid.uuid4())))
 
         def work(tx):
             tx.run(f"CREATE (n:{label} $props)", props=props)
@@ -172,7 +204,7 @@ def register(res, cfg): #claude suggested that wrapping the endpoints inside of 
 
         return write(work)
 
-    @app.patch(base + "/{item_id}", name=f"update_{res}") #vibecoded
+    @app.patch(base + "/{item_id}", name=f"update_{res}")
     def update(item_id: str, body: dict = Body(...)):
         props = {k: body[k] for k in cfg["fields"] if k in body}
 
@@ -208,9 +240,8 @@ def register(res, cfg): #claude suggested that wrapping the endpoints inside of 
 for res, cfg in RESOURCES.items():
     register(res, cfg)
 
-
-#route apis
-ROUTE_RET = "r{.*, id: elementId(r), from_id: a.id, to_id: b.id} AS item" #it uses the inbuilt id as identifier , note that claude said this id can change after a restore or dump so little fragile -kauboi007 #vibecoded
+# Route APIs
+ROUTE_RET = "r{.*, id: elementId(r), from_id: a.id, to_id: b.id} AS item"
 
 
 @app.get("/api/routes")
@@ -238,8 +269,8 @@ def create_route(body: dict = Body(...)):
     return write(work)
 
 
-@app.patch("/api/routes/{route_id}") #update route parameters , claude said patch is better than put -kauboi007
-def update_route(route_id: str, body: dict = Body(...)): #this section is vibecoded
+@app.patch("/api/routes/{route_id}")
+def update_route(route_id: str, body: dict = Body(...)):
     props = {k: body[k] for k in ("distance",) if k in body}
 
     def work(tx):
@@ -268,16 +299,19 @@ def delete_route(route_id: str):
     write(work)
     return Response(status_code=204)
 
-#plan api for cbs
+
+# Plan API
 class TroopMission(BaseModel):
     troop_id: str
-    start: str   # checkpoint NAME
-    end: str     # checkpoint NAME
+    start: str  # Checkpoint name or code
+    end: str    # Checkpoint name or code
+
 
 class PlanRequest(BaseModel):
     troops: list[TroopMission]
 
-class _Conn:  # lets get_subgraph and et_threats (which expect conn.run_query) reuse this file's driver
+
+class _Conn:
     def run_query(self, q):
         return read(lambda tx: tx.run(q).data())
 
@@ -291,36 +325,53 @@ def plan(req: PlanRequest):
     graph = get_subgraph(conn)
     coords = get_coords(conn)
     threats = get_threats(conn)
-    known_troops = {r["id"]: r["name"] for r in read(lambda tx: tx.run("MATCH (t:troop) RETURN t.id AS id, t.name AS name").data())}
 
-    # validate everything before touching cbs
+    known_troops = {
+        r["identifier"]: r["name"]
+        for r in read(lambda tx: tx.run("MATCH (t:troop) RETURN COALESCE(t.id, t.name) AS identifier, t.name AS name").data())
+    }
+
     ids = [t.troop_id for t in req.troops]
     if len(ids) != len(set(ids)):
         raise HTTPException(422, "duplicate troop_id in request")
+
+    all_speeds = fetch_all_troop_speeds_from_laravel()
+
+    speeds = {}
     for t in req.troops:
         if t.troop_id not in known_troops:
-            raise HTTPException(404, f"troop {t.troop_id} not found")
+            raise HTTPException(404, f"troop '{t.troop_id}' not found")
         for cp in (t.start, t.end):
             if cp not in graph or cp not in coords:
-                raise HTTPException(422, f"checkpoint '{cp}' unknown or has no routes (troop {t.troop_id})")
+                raise HTTPException(422, f"checkpoint '{cp}' unknown or unrouted (troop {t.troop_id})")
+        speeds[t.troop_id] = float(all_speeds.get(t.troop_id, 50.0))
 
     troops = {t.troop_id: (t.start, t.end) for t in req.troops}
 
     try:
-        paths = cbs(troops, graph, coords)
-    except ValueError as e:                      # a troop has no route at all
+        paths = cbs(troops, speeds, graph, coords)
+    except ValueError as e:
         return {"feasible": False, "reason": str(e), "plans": {}}
-    if paths is None:                            # search exhausted or hit the limit
-        return {"feasible": False, "reason": "no collision free plan found", "plans": {}}
 
+    if paths is None:
+        return {"feasible": False, "reason": "no collision free plan found", "plans": {}}
     plans = {}
     for t in req.troops:
         path = paths[t.troop_id]
-        exposure, unavoidable = assess_threat(path, t.start, t.end, graph, coords, threats)
+        sp = speeds[t.troop_id]
+        exposure, unavoidable = assess_threat(path, t.start, t.end, graph, coords, threats, speed_kmh=sp)
         plans[t.troop_id] = {
             "troop_name": known_troops[t.troop_id],
-            "path": [{"checkpoint": n, "tick": ts} for n, ts in path],
-            "ticks": path[-1][1],
+            "speed_kmh": sp,
+            "path": [
+                {
+                    "checkpoint": n,
+                    "arrival_hr": round(arr, 3),
+                    "departure_hr": round(dep, 3),
+                }
+                for n, arr, dep in path
+            ],
+            "total_time_hr": round(path[-1][1], 3),
             "threat_exposure": exposure,
             "unavoidable_threat": unavoidable,
         }

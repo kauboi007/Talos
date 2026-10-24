@@ -12,6 +12,7 @@ coords=get_coords(conn)
 #get subgraph
 subgraph=get_subgraph(conn)
 
-troops = {"t1": ("st_thomas_mount", "ramanathapuram"), "t2": ("chengalpet", "wellington")}
+troops = {"t1": ("st_thomas_mount", "ennore"), "t2": ("chengalpet", "perambur")}
 
+print(cbs(troops,subgraph,coords))
 
