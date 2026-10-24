@@ -10,6 +10,9 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+        <script>
+            document.documentElement.dataset.theme = localStorage.getItem('talos-theme') || 'light';
+        </script>
         <link rel="stylesheet" href="{{ asset('css/app.css') }}">
         @livewireStyles
     </head>

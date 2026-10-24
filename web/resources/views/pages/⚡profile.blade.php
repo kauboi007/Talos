@@ -211,8 +211,8 @@ class extends Component
     @if ($saved)
         <div
             role="status"
-            class="flex items-start gap-3 border border-[#1e5631]
-                   bg-[#0d2a1b] p-4 text-sm text-[#4ade80]"
+            class="flex items-start gap-3 border border-secure-border
+                   bg-secure-bg p-4 text-sm text-secure"
         >
             <x-lucide-check-circle class="w-5 h-5 shrink-0" />
             <div>

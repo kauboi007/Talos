@@ -151,7 +151,7 @@ class extends Component {
     <footer class="p-4 border-t border-outline-variant bg-surface-container-lowest/50 flex flex-col gap-3">
         <div class="flex items-center justify-between font-mono-data text-xs text-on-surface-variant">
             <span class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 bg-[#4ade80] rounded-full animate-pulse"></span>
+                <span class="w-1.5 h-1.5 bg-secure rounded-full animate-pulse"></span>
                 SYSTEM STATUS: OPERATIONAL
             </span>
             <span class="opacity-50">NODE_7A</span>

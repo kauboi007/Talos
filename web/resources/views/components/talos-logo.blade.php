@@ -20,7 +20,7 @@
             viewBox="0 0 100 120"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            class="w-full h-full text-[#bec6e0] drop-shadow-[0_0_10px_rgba(190,198,224,0.3)]"
+            class="w-full h-full text-primary drop-shadow-[0_0_10px_rgba(51,78,104,0.25)]"
             aria-label="Talos shield emblem"
             role="img"
         >
@@ -54,7 +54,8 @@
                 points="36,44 64,44 58,54 42,54"
                 stroke="currentColor"
                 stroke-width="1.5"
-                fill="rgba(190,198,224,0.15)"
+                fill="currentColor"
+                fill-opacity="0.15"
             />
         </svg>
     </div>

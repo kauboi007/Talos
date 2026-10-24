@@ -1,11 +1,3 @@
-// Talos Neo4j demo graph seed
-// Creates 124 minimal :soldier nodes. Account details remain in Laravel/MongoDB.
-// Safe to re-run: uses MERGE for nodes and relationships.
-// Note: :user nodes are intentionally not created; Laravel/MongoDB owns user accounts.
-
-////////////////////////////////////////////////////////////////////////
-// 1. Migrate existing checkpoint nodes from the old name-only schema
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   ['tambaram', 'CHK-TAMBARAM'],
   ['avadi', 'CHK-AVADI'],
@@ -21,9 +13,6 @@ UNWIND [
 MATCH (c:checkpoint {name: row[0]})
 SET c.checkpoint_code = row[1];
 
-////////////////////////////////////////////////////////////////////////
-// 2. Constraints
-////////////////////////////////////////////////////////////////////////
 CREATE CONSTRAINT soldier_service_id_unique IF NOT EXISTS
 FOR (s:soldier)
 REQUIRE s.service_id IS UNIQUE;
@@ -32,9 +21,6 @@ CREATE CONSTRAINT checkpoint_code_unique IF NOT EXISTS
 FOR (c:checkpoint)
 REQUIRE c.checkpoint_code IS UNIQUE;
 
-////////////////////////////////////////////////////////////////////////
-// 3. Checkpoint nodes
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   {code:'CHK-TAMBARAM', name:'tambaram', status:'open', type:'depot', lat:12.92, lng:80.13},
   {code:'CHK-AVADI', name:'avadi', status:'open', type:'base', lat:13.11, lng:80.10},
@@ -54,10 +40,6 @@ SET c.name = row.name,
     c.lat = row.lat,
     c.lng = row.lng;
 
-////////////////////////////////////////////////////////////////////////
-// 4. All 124 soldier nodes and stationed_at relationships
-// IDs follow SoldierSeeder's actual generation order.
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   {id:'TAL-OF-0001', code:'CHK-TAMBARAM'},
   {id:'TAL-OF-0002', code:'CHK-AVADI'},
@@ -189,9 +171,6 @@ WITH s, row
 MATCH (c:checkpoint {checkpoint_code: row.code})
 MERGE (s)-[:stationed_at]->(c);
 
-////////////////////////////////////////////////////////////////////////
-// 5. Route graph (directed edges; distances are approximate kilometres)
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   ['CHK-TAMBARAM', 'CHK-AVADI', 20],
   ['CHK-TAMBARAM', 'CHK-ST-THOMAS-MOUNT', 15],
@@ -208,9 +187,6 @@ MATCH (b:checkpoint {checkpoint_code: row[1]})
 MERGE (a)-[r:route_to]->(b)
 SET r.distance = row[2];
 
-////////////////////////////////////////////////////////////////////////
-// 6. Troop nodes
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   {name:'alpha', type:'kill', head_count:4, priority:1, status:'started'},
   {name:'delta', type:'medic', head_count:2, priority:2, status:'started'},
@@ -223,9 +199,6 @@ SET t.type = row.type,
     t.priority = row.priority,
     t.status = row.status;
 
-////////////////////////////////////////////////////////////////////////
-// 7. Threat event nodes
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   {name:'a1', type:'attack', severity:1},
   {name:'b1', type:'block', severity:3}
@@ -235,9 +208,6 @@ SET te.type = row.type,
     te.timestamp = datetime(),
     te.severity = row.severity;
 
-////////////////////////////////////////////////////////////////////////
-// 8. Reporting hierarchy
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   ['TAL-OF-0002', 'TAL-OF-0003'],
   ['TAL-OF-0003', 'TAL-OF-0001'],
@@ -251,9 +221,6 @@ MATCH (a:soldier {service_id: row[0]})
 MATCH (b:soldier {service_id: row[1]})
 MERGE (a)-[:reports_to]->(b);
 
-////////////////////////////////////////////////////////////////////////
-// 9. Soldier-to-troop membership
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   ['TAL-OF-0002', 'alpha'],
   ['TAL-OF-0003', 'delta'],
@@ -264,9 +231,6 @@ MATCH (s:soldier {service_id: row[0]})
 MATCH (t:troop {name: row[1]})
 MERGE (s)-[:belongs_to]->(t);
 
-////////////////////////////////////////////////////////////////////////
-// 10. Troop escort relationships (original direction preserved)
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   ['delta', 'TAL-OF-0001'],
   ['alpha', 'TAL-OF-0005']
@@ -275,9 +239,6 @@ MATCH (t:troop {name: row[0]})
 MATCH (s:soldier {service_id: row[1]})
 MERGE (t)-[:escorts]->(s);
 
-////////////////////////////////////////////////////////////////////////
-// 11. Threat-event to checkpoint relationships
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   ['a1', 'CHK-CHENGALPET'],
   ['b1', 'CHK-THANJAVUR']
@@ -286,9 +247,6 @@ MATCH (te:threatevent {name: row[0]})
 MATCH (c:checkpoint {checkpoint_code: row[1]})
 MERGE (te)-[:affects]->(c);
 
-////////////////////////////////////////////////////////////////////////
-// 12. Troop start/end checkpoints
-////////////////////////////////////////////////////////////////////////
 UNWIND [
   ['alpha', 'CHK-TAMBARAM', 'starts_at'],
   ['alpha', 'CHK-INS-RAJALI', 'ends_at'],
@@ -307,20 +265,3 @@ FOREACH (_ IN CASE WHEN row[2] = 'starts_at' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN row[2] = 'ends_at' THEN [1] ELSE [] END |
   MERGE (t)-[:ends_at]->(c)
 );
-
-////////////////////////////////////////////////////////////////////////
-// 13. Remove obsolete officer nodes from the previous schema
-// Run this only if you've confirmed the old :officer graph is no longer needed.
-////////////////////////////////////////////////////////////////////////
-MATCH (o:officer)
-DETACH DELETE o;
-
-// Verification queries (run separately after the seed script):
-// MATCH (s:soldier) RETURN count(s) AS soldier_count;
-// MATCH (s:soldier) OPTIONAL MATCH (s)-[:stationed_at]->(c:checkpoint)
-// RETURN count(DISTINCT s) AS total_soldiers,
-//        count(DISTINCT CASE WHEN c IS NOT NULL THEN s END) AS assigned_soldiers;
-// MATCH (s:soldier)-[:stationed_at]->(c:checkpoint {checkpoint_code:'CHK-AVADI'})
-// RETURN s.service_id ORDER BY s.service_id;
-// MATCH (c:checkpoint) OPTIONAL MATCH (s:soldier)-[:stationed_at]->(c)
-// RETURN c.checkpoint_code AS checkpoint, count(s) AS personnel_count ORDER BY checkpoint;

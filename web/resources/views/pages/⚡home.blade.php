@@ -37,14 +37,14 @@ class extends Component {
     <div
         class="absolute inset-0 pointer-events-none opacity-20 z-0"
         style="
-            background-image: linear-gradient(#1e293b 1px, transparent 1px),
-                linear-gradient(90deg, #1e293b 1px, transparent 1px);
+            background-image: linear-gradient(var(--color-outline-variant) 1px, transparent 1px),
+                linear-gradient(90deg, var(--color-outline-variant) 1px, transparent 1px);
             background-size: 48px 48px;
         "
     ></div>
 
     {{-- Hero header banner --}}
-    <div class="relative z-10 bg-surface-container border border-outline-variant rounded-lg p-6 md:p-8 overflow-hidden shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
+    <div class="relative z-10 bg-surface-container border border-outline-variant rounded-lg p-6 md:p-8 overflow-hidden shadow-xl">
 
         {{-- Decorative tech corners --}}
         <div class="tech-corner-tl"></div>
@@ -55,9 +55,9 @@ class extends Component {
         {{-- Top tactical bar --}}
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/80 pb-4 mb-6">
             <div class="flex flex-wrap items-center gap-3">
-                <div class="w-2.5 h-2.5 rounded-full bg-[#4ade80] animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-secure animate-pulse shadow-[0_0_8px_rgba(21,128,61,0.45)]"></div>
 
-                <span class="font-mono-data text-xs uppercase tracking-widest text-[#4ade80] font-bold">
+                <span class="font-mono-data text-xs uppercase tracking-widest text-secure font-bold">
                     CLASSIFIED DEFENSE ANALYTICS PLATFORM
                 </span>
             </div>

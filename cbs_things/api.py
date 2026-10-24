@@ -119,7 +119,7 @@ def set_rels(tx, cfg, node_id, body): #vibecoded
             raise HTTPException(404, f"{key}: no {tl} with id {tid}")
 
 
-def fetch(tx, cfg, node_id): #fetching the  node by id 
+def fetch(tx, cfg, node_id): #fetching the  node by id
     rec = tx.run(
         f"MATCH (n:{cfg['label']} {{id:$id}}) RETURN {projection(cfg)} AS item",
         id=node_id,
@@ -219,7 +219,7 @@ def list_routes():
     return [r["item"] for r in read(lambda tx: tx.run(q).data())]
 
 
-@app.post("/api/routes", status_code=201) 
+@app.post("/api/routes", status_code=201)
 def create_route(body: dict = Body(...)):
     missing = [f for f in ("from_id", "to_id", "distance") if f not in body]
     if missing:

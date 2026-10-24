@@ -19,21 +19,21 @@ class extends Component {
             'value' => '248',
             'detail' => 'Personnel deployed',
             'icon' => 'users',
-            'color' => 'text-secondary',
+            'color' => 'text-primary',
         ],
         [
             'label' => 'Threat Level',
             'value' => 'ELEVATED',
             'detail' => '2 sectors flagged',
             'icon' => 'shield-alert',
-            'color' => 'text-[#ffb95f]',
+            'color' => 'text-tertiary',
         ],
         [
             'label' => 'Checkpoints',
             'value' => '86%',
             'detail' => '12 of 14 operational',
             'icon' => 'radar',
-            'color' => 'text-[#4ade80]',
+            'color' => 'text-secure',
         ],
     ];
 
@@ -194,8 +194,8 @@ class extends Component {
 
                                 <td class="p-3 text-center">
                                     @if ($deployment['status'] === 'ACTIVE')
-                                        <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-mono-data bg-[#0d2a1b] border border-[#1e5631] text-[#4ade80] rounded">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-[#4ade80]"></span>
+                                        <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-mono-data bg-secure-bg border border-secure-border text-secure rounded">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-secure"></span>
                                             ACTIVE
                                         </span>
                                     @else
@@ -245,7 +245,7 @@ class extends Component {
                             </div>
 
                             <div class="text-right shrink-0">
-                                <p class="font-mono-data text-xs text-[#4ade80]">
+                                <p class="font-mono-data text-xs text-secure">
                                     {{ $node['latency'] }} ms
                                 </p>
                                 <p class="text-[10px] text-on-surface-variant">LATENCY</p>
@@ -278,7 +278,7 @@ class extends Component {
                                 @elseif ($event['severity'] === 'MEDIUM')
                                     <span class="font-mono-data text-[10px] text-tertiary uppercase">{{ $event['severity'] }}</span>
                                 @else
-                                    <span class="font-mono-data text-[10px] text-[#4ade80] uppercase">{{ $event['severity'] }}</span>
+                                    <span class="font-mono-data text-[10px] text-secure uppercase">{{ $event['severity'] }}</span>
                                 @endif
                             </div>
 

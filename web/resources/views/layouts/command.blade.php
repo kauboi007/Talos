@@ -7,6 +7,9 @@
 
     <title>{{ isset($title) && $title ? $title . ' | ' . config('app.name') : config('app.name') }}</title>
 
+    <script>
+        document.documentElement.dataset.theme = localStorage.getItem('talos-theme') || 'light';
+    </script>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,7 +61,13 @@
     x-data="{
         sidebarOpen: false,
         missionOpen: false,
-        profileOpen: false
+        profileOpen: false,
+        darkMode: document.documentElement.dataset.theme === 'dark',
+        toggleTheme() {
+            this.darkMode = !this.darkMode;
+            document.documentElement.dataset.theme = this.darkMode ? 'dark' : 'light';
+            localStorage.setItem('talos-theme', this.darkMode ? 'dark' : 'light');
+        }
     }"
 >
     {{-- Mobile sidebar backdrop --}}
@@ -270,13 +279,27 @@
             </div>
 
             <div class="flex items-center gap-4">
+                <button
+                    type="button"
+                    @click="toggleTheme()"
+                    class="flex items-center gap-2 rounded p-2 text-on-surface-variant
+                           hover:bg-surface-variant hover:text-tertiary transition-colors
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-tertiary"
+                    :aria-label="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+                    :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+                >
+                    <x-lucide-sun x-show="darkMode" class="w-4 h-4" />
+                    <x-lucide-moon x-show="!darkMode" class="w-4 h-4" />
+                    <span class="hidden md:inline text-[10px] font-bold uppercase tracking-wider" x-text="darkMode ? 'Light' : 'Dark'"></span>
+                </button>
+
                 <div class="hidden sm:flex items-center gap-2">
                     <span class="relative flex h-2 w-2">
                         <span
                             class="absolute inline-flex h-full w-full rounded-full
-                                   bg-[#4ade80] opacity-60 animate-ping"
+                                   bg-secure opacity-60 animate-ping"
                         ></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-[#4ade80]"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-secure"></span>
                     </span>
 
                     <span class="text-[10px] font-mono-data uppercase

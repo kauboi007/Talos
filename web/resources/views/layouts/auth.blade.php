@@ -7,6 +7,9 @@
 
     <title>{{ $title ? $title . ' | ' . config('app.name') : config('app.name') }}</title>
 
+    <script>
+        document.documentElement.dataset.theme = localStorage.getItem('talos-theme') || 'light';
+    </script>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">

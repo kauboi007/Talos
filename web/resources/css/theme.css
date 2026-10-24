@@ -1,5 +1,42 @@
 /* Tactical Command Theme Variables & Colors */
 :root {
+  --color-surface: #f5f7fa;
+  --color-surface-dim: #eef1f5;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f8fafc;
+  --color-surface-container: #ffffff;
+  --color-surface-container-high: #eef3f8;
+  --color-surface-container-highest: #e5ebf2;
+  --color-surface-variant: #dbe3ec;
+
+  --color-on-surface: #172235;
+  --color-on-surface-variant: #526176;
+  --color-outline: #65748a;
+  --color-outline-variant: #c5cfdb;
+
+  --color-primary: #334e68;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #e8eef5;
+
+  --color-tertiary: #b45309;
+  --color-tertiary-fixed: #d97706;
+  --color-tertiary-fixed-dim: #b45309;
+  --color-tertiary-container: #fff7ed;
+  --color-on-tertiary: #ffffff;
+
+  --color-error: #b42318;
+  --color-error-container: #fef3f2;
+  --color-on-error: #ffffff;
+
+  --color-secure: #15803d;
+  --color-secure-bg: #f0fdf4;
+  --color-secure-border: #86efac;
+
+  --sidebar-width: 280px;
+}
+
+[data-theme='dark'] {
   --color-surface: #051424;
   --color-surface-dim: #051424;
   --color-surface-bright: #2c3a4c;
@@ -32,8 +69,6 @@
   --color-secure: #4ade80;
   --color-secure-bg: #0d2a1b;
   --color-secure-border: #1e5631;
-
-  --sidebar-width: 280px;
 }
 
 body {
