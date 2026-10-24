@@ -11,6 +11,12 @@
         document.documentElement.dataset.theme = localStorage.getItem('talos-theme') || 'light';
     </script>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,13 +41,23 @@
     $canDispatch = in_array($role, [
         'system_admin',
         'hq_admin',
-        'base_admin',
     ], true);
 
     $canManagePersonnel = in_array($role, [
         'system_admin',
         'hq_admin',
         'base_admin',
+    ], true);
+
+    $canViewCheckpointGraph = in_array($role, [
+        'system_admin',
+        'hq_admin',
+        'base_admin',
+    ], true);
+
+    $canCreateMission = in_array($role, [
+        'system_admin',
+        'hq_admin',
     ], true);
 
     $canViewLogs = in_array($role, [
@@ -170,15 +186,49 @@
             {{-- Administrative navigation --}}
             @if ($canManagePersonnel)
                 <a
-                    href="/personnel"
+                    href="{{ route('personnel') }}"
                     wire:navigate
                     @click="sidebarOpen = false"
-                    class="flex items-center gap-4 px-4 py-3 text-sm
-                           text-on-surface-variant hover:bg-surface-variant
-                           hover:text-on-surface transition-colors"
+                    @class([
+                        'flex items-center gap-4 px-4 py-3 text-sm transition-colors',
+                        'text-tertiary bg-surface-container-high' => request()->routeIs('personnel'),
+                        'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface' => !request()->routeIs('personnel'),
+                    ])
                 >
                     <x-lucide-users class="w-5 h-5" />
                     Personnel
+                </a>
+            @endif
+
+            @if ($canViewCheckpointGraph)
+                <a
+                    href="{{ route('checkpoint-graph') }}"
+                    wire:navigate
+                    @click="sidebarOpen = false"
+                    @class([
+                        'flex items-center gap-4 px-4 py-3 text-sm transition-colors',
+                        'text-tertiary bg-surface-container-high' => request()->routeIs('checkpoint-graph'),
+                        'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface' => !request()->routeIs('checkpoint-graph'),
+                    ])
+                >
+                    <x-lucide-map class="w-5 h-5" />
+                    Checkpoint Graph
+                </a>
+            @endif
+
+            @if ($canCreateMission)
+                <a
+                    href="{{ route('missions.create') }}"
+                    wire:navigate
+                    @click="sidebarOpen = false"
+                    @class([
+                        'flex items-center gap-4 px-4 py-3 text-sm transition-colors',
+                        'text-tertiary bg-surface-container-high' => request()->routeIs('missions.create'),
+                        'text-on-surface-variant hover:bg-surface-variant hover:text-on-surface' => !request()->routeIs('missions.create'),
+                    ])
+                >
+                    <x-lucide-route class="w-5 h-5" />
+                    Plan CBS Mission
                 </a>
             @endif
 
@@ -504,5 +554,13 @@
 </div>
 
 @livewireScripts
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script>
+    window.dispatchEvent(new Event('leaflet:ready'));
+</script>
 </body>
 </html>

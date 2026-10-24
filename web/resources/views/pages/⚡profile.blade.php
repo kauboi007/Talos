@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\User;
+use App\Services\Neo4jService;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -24,10 +27,15 @@ class extends Component
 
     public bool $editing = false;
     public bool $saved = false;
+    public ?array $currentBase = null;
+    public ?array $reportingOfficer = null;
+    public ?array $currentTroop = null;
+    public ?string $operationalError = null;
 
     public function mount(): void
     {
         $this->loadProfile();
+        $this->loadOperationalData();
     }
 
     private function currentUser(): User
@@ -60,6 +68,35 @@ class extends Component
             $this->city = $soldier->city;
             $this->state = $soldier->state;
             $this->pincode = $soldier->pincode;
+        }
+    }
+
+    private function loadOperationalData(): void
+    {
+        $user = $this->currentUser();
+        $this->currentBase = null;
+        $this->reportingOfficer = null;
+        $this->currentTroop = null;
+        $this->operationalError = null;
+
+        if (! $user->soldier) {
+            return;
+        }
+
+        try {
+            $neo4j = app(Neo4jService::class);
+            $overview = $neo4j->soldierOverview($user);
+            $chain = $neo4j->reportingChain($user);
+
+            $this->currentBase = data_get($overview, 'checkpoint')
+                ?? data_get($overview, 'current_base');
+            $this->currentTroop = data_get($overview, 'troop');
+            $this->reportingOfficer = data_get($overview, 'reporting_officer')
+                ?? data_get($chain, 'immediate')
+                ?? data_get($chain, '0');
+        } catch (ConnectionException|RequestException $exception) {
+            report($exception);
+            $this->operationalError = 'Operational assignment data is temporarily unavailable.';
         }
     }
 
@@ -225,6 +262,61 @@ class extends Component
     @endif
 
     <form wire:submit="update" class="space-y-6">
+
+        {{-- Operational assignment --}}
+        @if ($soldier)
+            <section class="bg-primary-container border border-outline-variant rounded p-4 md:p-6">
+                <div class="flex items-center gap-3 mb-5 border-b border-outline-variant pb-4">
+                    <div class="w-10 h-10 flex items-center justify-center
+                                bg-surface-container-high border border-outline-variant
+                                text-tertiary">
+                        <x-lucide-network class="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h2 class="text-base font-semibold text-on-surface">Operational Assignment</h2>
+                        <p class="text-xs text-on-surface-variant mt-1">
+                            Current dynamic hierarchy and checkpoint information
+                        </p>
+                    </div>
+                </div>
+
+                @if ($operationalError)
+                    <p class="border border-error/30 bg-error-container p-3 text-sm text-error" role="alert">
+                        {{ $operationalError }}
+                    </p>
+                @else
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-surface-container-low border border-outline-variant p-4">
+                            <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Current Base</p>
+                            <p class="mt-2 text-sm font-semibold text-on-surface">
+                                {{ data_get($currentBase, 'name', 'Not assigned') }}
+                            </p>
+                            <p class="mt-1 font-mono-data text-[10px] text-tertiary">
+                                {{ data_get($currentBase, 'checkpoint_code', '—') }}
+                            </p>
+                        </div>
+                        <div class="bg-surface-container-low border border-outline-variant p-4">
+                            <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Reporting Officer</p>
+                            <p class="mt-2 text-sm font-semibold text-on-surface">
+                                {{ data_get($reportingOfficer, 'name', 'Not assigned') }}
+                            </p>
+                            <p class="mt-1 font-mono-data text-[10px] text-tertiary">
+                                {{ data_get($reportingOfficer, 'service_id', '—') }}
+                            </p>
+                        </div>
+                        <div class="bg-surface-container-low border border-outline-variant p-4">
+                            <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Current Troop</p>
+                            <p class="mt-2 text-sm font-semibold text-on-surface">
+                                {{ data_get($currentTroop, 'name', 'Not assigned') }}
+                            </p>
+                            <p class="mt-1 text-xs text-on-surface-variant">
+                                {{ data_get($currentTroop, 'type', '—') }}
+                            </p>
+                        </div>
+                    </div>
+                @endif
+            </section>
+        @endif
 
         {{-- Account information --}}
         <section class="bg-primary-container border border-outline-variant rounded p-4 md:p-6">
