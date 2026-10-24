@@ -298,7 +298,7 @@ class extends Component
                         <div class="bg-surface-container-low border border-outline-variant p-4">
                             <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Reporting Officer</p>
                             <p class="mt-2 text-sm font-semibold text-on-surface">
-                                {{ data_get($reportingOfficer, 'name', 'Not assigned') }}
+                                {{ data_get($reportingOfficer, 'name', 'Name unavailable') }}
                             </p>
                             <p class="mt-1 font-mono-data text-[10px] text-tertiary">
                                 {{ data_get($reportingOfficer, 'service_id', '—') }}

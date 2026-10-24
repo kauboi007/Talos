@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Soldier;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Client\PendingRequest;
@@ -25,35 +26,124 @@ class Neo4jService
 
     public function soldierOverview(User $actor): array
     {
-        return $this->get("/api/soldiers/{$this->serviceId($actor)}/overview");
+        $officer = $this->getResource('officers', $this->serviceId($actor));
+        $checkpoint = $this->resourceFromReference('checkpoints', data_get($officer, 'stationed_at_id'));
+        $troop = $this->resourceFromReference('troops', data_get($officer, 'troop_id'));
+        $reportingOfficer = $this->resourceFromReference('officers', data_get($officer, 'reports_to_id'));
+
+        return [
+            'soldier' => $officer,
+            'checkpoint' => $checkpoint,
+            'troop' => $troop,
+            'reporting_officer' => $reportingOfficer,
+        ];
+    }
+
+    public function dashboardData(User $actor): array
+    {
+        $officers = array_map(
+            fn (array $officer): array => $this->enrichOfficer($officer),
+            $this->items($this->get('/api/officers')),
+        );
+        $checkpoints = $this->items($this->get('/api/checkpoints'));
+        $troops = $this->items($this->get('/api/troops'));
+        $threatEvents = $this->items($this->get('/api/threat-events'));
+
+        if ($actor->role !== 'system_admin' && $actor->soldier) {
+            $checkpointCode = $this->checkpointCode($actor);
+            $officers = array_values(array_filter(
+                $officers,
+                fn (array $officer): bool => data_get($officer, 'stationed_at_id') === $checkpointCode,
+            ));
+        }
+
+        $deployments = array_map(function (array $troop) use ($officers): array {
+            $troopName = data_get($troop, 'name');
+            $assigned = array_values(array_filter(
+                $officers,
+                fn (array $officer): bool => data_get($officer, 'troop_id') === $troopName,
+            ));
+
+            return [
+                'sector' => $troopName ?? '—',
+                'unit' => data_get($troop, 'type', 'Unclassified'),
+                'soldiers' => count($assigned),
+                'officers' => count($assigned),
+                'status' => strtoupper((string) data_get($troop, 'status', 'unknown')),
+            ];
+        }, $troops);
+
+        return [
+            'officer_count' => count($officers),
+            'troop_count' => count($troops),
+            'checkpoint_count' => count($checkpoints),
+            'operational_checkpoint_count' => count(array_filter(
+                $checkpoints,
+                fn (array $checkpoint): bool => in_array(
+                    strtolower((string) data_get($checkpoint, 'status')),
+                    ['open', 'active', 'operational'],
+                    true,
+                ),
+            )),
+            'threat_events' => $threatEvents,
+            'deployments' => $deployments,
+        ];
     }
 
     public function reportingChain(User $actor): array
     {
-        return $this->get("/api/soldiers/{$this->serviceId($actor)}/reporting-chain");
+        $chain = [];
+        $current = $this->getResource('officers', $this->serviceId($actor));
+
+        while ($current !== null && count($chain) < 25) {
+            $reportsTo = data_get($current, 'reports_to_id');
+            if (! is_string($reportsTo) || $reportsTo === '') {
+                break;
+            }
+
+            $current = $this->getResource('officers', $reportsTo);
+            if ($current !== null) {
+                $chain[] = $current;
+            }
+        }
+
+        return [
+            'immediate' => $chain[0] ?? null,
+            'chain' => $chain,
+        ];
     }
 
     public function checkpointForSoldier(User $actor): array
     {
-        return $this->get("/api/soldiers/{$this->serviceId($actor)}/checkpoint");
+        return $this->soldierOverview($actor)['checkpoint'] ?? [];
     }
 
     public function troopForSoldier(User $actor): array
     {
-        return $this->get("/api/soldiers/{$this->serviceId($actor)}/troop");
+        return $this->soldierOverview($actor)['troop'] ?? [];
     }
 
     public function subordinates(User $actor): array
     {
         $this->ensureRole($actor, self::ADMIN_ROLES);
 
+        $officers = $this->items($this->get('/api/officers'));
         if ($actor->role === 'system_admin') {
-            return $this->get('/api/soldiers/subordinates');
+            return array_map(
+                fn (array $officer): array => $this->enrichOfficer($officer),
+                $officers,
+            );
         }
 
-        return $this->get('/api/soldiers/subordinates', [
-            'service_id' => $this->serviceId($actor),
-        ]);
+        $checkpointCode = $this->checkpointCode($actor);
+
+        return array_values(array_map(
+            fn (array $officer): array => $this->enrichOfficer($officer),
+            array_filter(
+                $officers,
+                fn (array $officer): bool => data_get($officer, 'stationed_at_id') === $checkpointCode,
+            ),
+        ));
     }
 
     public function checkpointGraph(User $actor, ?string $checkpointCode = null): array
@@ -144,6 +234,53 @@ class Neo4jService
         }
 
         return $data;
+    }
+
+    private function getResource(string $resource, ?string $identifier): ?array
+    {
+        if ($identifier === null || $identifier === '') {
+            return null;
+        }
+
+        $item = $this->get("/api/{$resource}/{$this->segment($identifier)}");
+
+        return $resource === 'officers' ? $this->enrichOfficer($item) : $item;
+    }
+
+    private function enrichOfficer(array $officer): array
+    {
+        $serviceId = data_get($officer, 'service_id');
+        if (! is_string($serviceId) || $serviceId === '') {
+            return $officer;
+        }
+
+        $soldier = Soldier::where('service_id', $serviceId)->first();
+        $user = $soldier?->user;
+
+        if ($user) {
+            $officer['name'] = $user->name();
+        }
+
+        if ($soldier) {
+            $officer['rank'] = $soldier->rank;
+        }
+
+        $reportingId = data_get($officer, 'reports_to_id');
+        if (is_string($reportingId) && $reportingId !== '') {
+            $reportingSoldier = Soldier::where('service_id', $reportingId)->first();
+            $reportingUser = $reportingSoldier?->user;
+
+            if ($reportingUser) {
+                $officer['reports_to_name'] = $reportingUser->name();
+            }
+        }
+
+        return $officer;
+    }
+
+    private function resourceFromReference(string $resource, mixed $identifier): ?array
+    {
+        return is_string($identifier) ? $this->getResource($resource, $identifier) : null;
     }
 
     private function request(): PendingRequest

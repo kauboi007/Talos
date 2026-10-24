@@ -18,15 +18,20 @@ class extends Component
     public function mount(Neo4jService $neo4j): void
     {
         try {
-            $this->graph = $neo4j->checkpointGraph(Auth::user());
-            $this->mapData = $this->buildMapData($this->graph);
+            $actor = Auth::user();
+            $highlightedCheckpoint = $actor->soldier
+                ? data_get($neo4j->checkpointForSoldier($actor), 'checkpoint_code')
+                : null;
+
+            $this->graph = $neo4j->checkpointGraph($actor);
+            $this->mapData = $this->buildMapData($this->graph, $highlightedCheckpoint);
         } catch (ConnectionException|RequestException $exception) {
             report($exception);
             $this->error = 'Checkpoint graph data is temporarily unavailable from the CBS service.';
         }
     }
 
-    private function buildMapData(array $graph): array
+    private function buildMapData(array $graph, ?string $highlightedCheckpoint): array
     {
         $nodes = [];
         foreach ($graph['nodes'] ?? [] as $node) {
@@ -49,6 +54,7 @@ class extends Component
                 'status' => data_get($node, 'status', 'unknown'),
                 'lat' => (float) $lat,
                 'lng' => (float) $lng,
+                'highlighted' => $id === $highlightedCheckpoint,
             ];
         }
 
@@ -185,9 +191,9 @@ class extends Component
 
                         L.circleMarker(position, {
                             radius: 8,
-                            color: '#172235',
+                            color: node.highlighted ? '#7c2d12' : '#172235',
                             weight: 2,
-                            fillColor: '#b45309',
+                            fillColor: node.highlighted ? '#dc2626' : '#b45309',
                             fillOpacity: 0.95,
                         }).addTo(this.map).bindPopup(`
                             <strong>${this.escape(node.name)}</strong><br>
