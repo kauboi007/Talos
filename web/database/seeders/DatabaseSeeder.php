@@ -12,7 +12,11 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      */
-    public function run(): void {
-        $this->call([SoldierSeeder::class]);
+    public function run(): void
+    {
+        $this->call([
+            SoldierSeeder::class,
+            TransportSeeder::class,
+        ]);
     }
 }

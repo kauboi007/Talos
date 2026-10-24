@@ -1,2 +1,3 @@
 web: php artisan serve
 css: tailwindcss -i resources/css/app.css -o public/css/app.css --watch
+cbs-worker: php artisan talos:cbs-worker

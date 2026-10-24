@@ -130,16 +130,17 @@ MERGE (a)-[r:route_to]->(b)
 SET r.distance_km = row[2];
 
 UNWIND [
-    {name:'Alpha',type:'kill',head_count:4,priority:1,status:'started'},
-    {name:'Delta',type:'medic',head_count:2,priority:2,status:'started'},
-    {name:'Bravo',type:'logistics',head_count:6,priority:2,status:'started'},
-    {name:'Charlie',type:'kill',head_count:5,priority:1,status:'started'}
+    {name:'Alpha',type:'kill',head_count:4,priority:1,status:'started',vehicle_id:'TAL-A-0001'},
+    {name:'Delta',type:'medic',head_count:2,priority:2,status:'started',vehicle_id:'TAL-AM-0001'},
+    {name:'Bravo',type:'logistics',head_count:6,priority:2,status:'started',vehicle_id:'TAL-T-0001'},
+    {name:'Charlie',type:'kill',head_count:5,priority:1,status:'started',vehicle_id:'TAL-M-0001'}
 ] AS row
 MERGE (t:troop {name:row.name})
 SET t.type = row.type,
     t.head_count = row.head_count,
     t.priority = row.priority,
-    t.status = row.status;
+    t.status = row.status,
+    t.vehicle_id = row.vehicle_id;
 
 UNWIND [
     ['TAL-OF-0002','Alpha'],

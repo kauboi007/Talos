@@ -1,13 +1,14 @@
 #code formatted by gemini - changes were reviewed and pushed
 
 import os
+import time
 import uuid
-import requests
 from contextlib import asynccontextmanager
 from fastapi import Body, FastAPI, HTTPException, Response
 from neo4j import GraphDatabase
 from neo4j.exceptions import ConstraintError
 from pydantic import BaseModel
+from redis import Redis
 
 from high_level_cbs import cbs
 from pathfinding import assess_threat
@@ -19,7 +20,20 @@ PASSWORD = os.getenv("NEO4J_PASSWORD", "talossys")
 driver = GraphDatabase.driver(URI, auth=(USER, PASSWORD))
 
 
-LARAVEL_API_URL = os.getenv("LARAVEL_API_URL", "http://localhost:8000/api") #viewit
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
+REDIS_DB = int(os.getenv("REDIS_DB", "0"))
+REDIS_REQUEST_STREAM = os.getenv("CBS_REQUEST_STREAM", "talos:cbs:requests")
+REDIS_RESPONSE_STREAM = os.getenv("CBS_RESPONSE_STREAM", "talos:cbs:responses")
+REDIS_TIMEOUT = float(os.getenv("CBS_REDIS_TIMEOUT", "10"))
+redis_client = Redis(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    password=REDIS_PASSWORD,
+    db=REDIS_DB,
+    decode_responses=True,
+)
 
 RESOURCES = { #redid regarding the seed.cql file
     "officers": {
@@ -147,18 +161,61 @@ def fetch(tx, cfg, id_field, node_id):
     return rec["item"] if rec else None
 
 
-def fetch_all_troop_speeds_from_laravel():
-    url = f"{LARAVEL_API_URL.rstrip('/')}/troops/speeds"
+def fetch_troop_speed_from_laravel(vehicle_id):
+    correlation_id = str(uuid.uuid4())
     try:
-        res = requests.get(url, timeout=4)
-        if res.status_code == 200:
-            data = res.json()
-            if isinstance(data, dict) and "data" in data:
-                return data["data"]
-            return data if isinstance(data, dict) else {}
-    except Exception:
-        pass
-    return {}
+        latest_response = redis_client.xrevrange(
+            REDIS_RESPONSE_STREAM,
+            count=1,
+        )
+        response_cursor = latest_response[0][0] if latest_response else "0-0"
+        redis_client.xadd(
+            REDIS_REQUEST_STREAM,
+            {
+                "correlation_id": correlation_id,
+                "vehicle_id": vehicle_id,
+            },
+        )
+        deadline = time.monotonic() + REDIS_TIMEOUT
+        stream_id = response_cursor
+
+        while time.monotonic() < deadline:
+            remaining_ms = max(1, int((deadline - time.monotonic()) * 1000))
+            result = redis_client.xread(
+                {REDIS_RESPONSE_STREAM: stream_id},
+                count=20,
+                block=min(remaining_ms, 1000),
+            )
+
+            for _, entries in result:
+                for response_id, fields in entries:
+                    stream_id = response_id
+                    if fields.get("correlation_id") != correlation_id:
+                        continue
+                    if fields.get("error"):
+                        raise HTTPException(503, fields["error"])
+                    speed = float(fields["speed_kmh"])
+                    if speed <= 0:
+                        raise HTTPException(503, "Laravel returned an invalid vehicle speed.")
+                    return speed
+        raise HTTPException(503, "Timed out waiting for Laravel vehicle speed.")
+    except HTTPException:
+        raise
+    except Exception as exception:
+        raise HTTPException(503, f"Vehicle speed service unavailable: {exception}") from exception
+
+
+def fetch_all_troop_speeds_from_laravel():
+    speeds = {}
+    for troop in read(
+        lambda tx: tx.run(
+            "MATCH (t:troop) RETURN t.name AS troop_id, t.vehicle_id AS vehicle_id"
+        ).data()
+    ):
+        vehicle_id = troop.get("vehicle_id")
+        if vehicle_id:
+            speeds[troop["troop_id"]] = fetch_troop_speed_from_laravel(vehicle_id)
+    return speeds
 
 #CRUD
 
@@ -335,6 +392,17 @@ def plan(req: PlanRequest):
         r["name"]: r["name"]
         for r in read(lambda tx: tx.run("MATCH (t:troop) RETURN t.name AS name").data())
     }
+    checkpoint_names = read(
+        lambda tx: tx.run(
+            "MATCH (c:checkpoint) RETURN c.name AS name, c.checkpoint_code AS code"
+        ).data()
+    )
+    checkpoint_aliases = {
+        alias: row["name"]
+        for row in checkpoint_names
+        for alias in (row.get("name"), row.get("code"))
+        if alias
+    }
 
     ids = [t.troop_id for t in req.troops]
     if len(ids) != len(set(ids)):
@@ -346,10 +414,14 @@ def plan(req: PlanRequest):
     for t in req.troops:
         if t.troop_id not in known_troops:
             raise HTTPException(404, f"troop '{t.troop_id}' not found")
-        for cp in (t.start, t.end):
+        start = checkpoint_aliases.get(t.start, t.start)
+        end = checkpoint_aliases.get(t.end, t.end)
+        for cp in (start, end):
             if cp not in graph or cp not in coords:
                 raise HTTPException(422, f"checkpoint '{cp}' unknown or unrouted (troop {t.troop_id})")
         speeds[t.troop_id] = float(all_speeds.get(t.troop_id, 50.0))
+        t.start = start
+        t.end = end
 
     troops = {t.troop_id: (t.start, t.end) for t in req.troops}
 

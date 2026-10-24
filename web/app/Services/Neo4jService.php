@@ -233,6 +233,29 @@ class Neo4jService
         return $this->get('/health');
     }
 
+    public function missionOptions(): array
+    {
+        return [
+            'troops' => $this->items($this->get('/api/troops')),
+            'checkpoints' => $this->items($this->get('/api/checkpoints')),
+        ];
+    }
+
+    public function planMission(array $troops): array
+    {
+        $response = $this->request()->post('/api/plan', [
+            'troops' => array_values($troops),
+        ]);
+
+        $data = $response->throw()->json();
+
+        if (! is_array($data)) {
+            throw new UnexpectedValueException('The CBS service returned a non-object planning response.');
+        }
+
+        return $data;
+    }
+
     private function get(string $uri, array $query = []): array
     {
         $response = $this->request()->get($uri, $query);

@@ -12,7 +12,7 @@ def get_coords(conn):
 #subgraph pulling
 def get_subgraph(conn):
     sub_graph={}
-    routes=(conn.run_query("match (c:checkpoint)-[r:route_to]-(s:checkpoint) return c.name as n,r.distance as d,s.name as cn"))
+    routes=(conn.run_query("match (c:checkpoint)-[r:route_to]-(s:checkpoint) return c.name as n,coalesce(r.distance_km,r.distance) as d,s.name as cn"))
     threats=get_threats(conn)
     for j in routes:
             if j['n'] not in sub_graph:
@@ -29,4 +29,3 @@ def get_threats(conn):
         s=i['severity'] or 0
         th[i['cname']]=th.get(i['cname'],0)+s**2+risk_factor #random funtion just to make the threat cost significant
     return th
-
