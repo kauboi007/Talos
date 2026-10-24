@@ -170,14 +170,6 @@ def health():
     except Exception as e:
         raise HTTPException(503, f"neo4j unreachable: {e}")
 
-
-@app.get("/api/troops/{troop_id}/speed")
-def get_troop_speed_endpoint(troop_id: str):
-    all_speeds = fetch_all_troop_speeds_from_laravel()
-    speed = all_speeds.get(troop_id, 50.0)
-    return {"troop_id": troop_id, "speed_kmh": speed}
-
-
 def register(res, cfg):
     label = cfg["label"]
     base = f"/api/{res}"
@@ -256,7 +248,6 @@ for res, cfg in RESOURCES.items():
 
 # Route APIs
 ROUTE_RET = "r{.*, id: elementId(r), from_id: a.checkpoint_code, to_id: b.checkpoint_code} AS item"
-
 
 @app.get("/api/routes")
 def list_routes():

@@ -343,6 +343,9 @@
   .mt-16 {
     margin-top: calc(var(--spacing) * 16);
   }
+  .mr-1 {
+    margin-right: var(--spacing);
+  }
   .mb-1 {
     margin-bottom: var(--spacing);
   }
@@ -363,6 +366,9 @@
   }
   .-ml-px {
     margin-left: -1px;
+  }
+  .ml-3 {
+    margin-left: calc(var(--spacing) * 3);
   }
   .block {
     display: block;
@@ -543,6 +549,9 @@
   }
   .min-w-\[640px\] {
     min-width: 640px;
+  }
+  .min-w-\[760px\] {
+    min-width: 760px;
   }
   .flex-1 {
     flex: 1;
@@ -764,12 +773,6 @@
   .border-tertiary {
     border-color: var(--color-tertiary);
   }
-  .border-tertiary\/30 {
-    border-color: color-mix(in srgb, #b45309 30%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-tertiary) 30%, transparent);
-    }
-  }
   .border-tertiary\/50 {
     border-color: color-mix(in srgb, #b45309 50%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -796,9 +799,6 @@
   }
   .bg-gray-200 {
     background-color: var(--color-gray-200);
-  }
-  .bg-outline {
-    background-color: var(--color-outline);
   }
   .bg-outline-variant {
     background-color: var(--color-outline-variant);
@@ -858,12 +858,6 @@
     background-color: color-mix(in srgb, #b45309 4%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-tertiary) 4%, transparent);
-    }
-  }
-  .bg-tertiary\/5 {
-    background-color: color-mix(in srgb, #b45309 5%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-tertiary) 5%, transparent);
     }
   }
   .bg-transparent {
@@ -1074,6 +1068,9 @@
   .break-words {
     overflow-wrap: break-word;
   }
+  .whitespace-nowrap {
+    white-space: nowrap;
+  }
   .text-error {
     color: var(--color-error);
   }
@@ -1153,10 +1150,6 @@
   }
   .shadow-\[0_0_12px_rgba\(255\,185\,95\,0\.15\)\] {
     --tw-shadow: 0 0 12px var(--tw-shadow-color, rgba(255,185,95,0.15));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-  }
-  .shadow-\[0_0_12px_rgba\(255\,185\,95\,0\.25\)\] {
-    --tw-shadow: 0 0 12px var(--tw-shadow-color, rgba(255,185,95,0.25));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
   .shadow-\[0_0_15px_rgba\(255\,185\,95\,0\.3\)\] {
@@ -1260,22 +1253,6 @@
     .hover\:bg-surface-variant:hover {
       background-color: var(--color-surface-variant);
     }
-    .hover\:bg-surface-variant\/30:hover {
-      background-color: color-mix(in srgb, #dbe3ec 30%, transparent);
-    }
-    @supports (color: color-mix(in lab, red, red)) {
-      .hover\:bg-surface-variant\/30:hover {
-        background-color: color-mix(in oklab, var(--color-surface-variant) 30%, transparent);
-      }
-    }
-    .hover\:bg-surface-variant\/40:hover {
-      background-color: color-mix(in srgb, #dbe3ec 40%, transparent);
-    }
-    @supports (color: color-mix(in lab, red, red)) {
-      .hover\:bg-surface-variant\/40:hover {
-        background-color: color-mix(in oklab, var(--color-surface-variant) 40%, transparent);
-      }
-    }
     .hover\:bg-tertiary-fixed:hover {
       background-color: var(--color-tertiary-fixed);
     }
@@ -1301,6 +1278,9 @@
     }
     .hover\:text-tertiary-fixed:hover {
       color: var(--color-tertiary-fixed);
+    }
+    .hover\:underline:hover {
+      text-decoration-line: underline;
     }
   }
   .focus\:border-blue-300:focus {
@@ -1395,8 +1375,14 @@
     }
   }
   @media (width >= 48rem) {
+    .md\:col-span-2 {
+      grid-column: span 2 / span 2;
+    }
     .md\:inline {
       display: inline;
+    }
+    .md\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .md\:grid-cols-3 {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1448,6 +1434,9 @@
   @media (width >= 80rem) {
     .xl\:col-span-2 {
       grid-column: span 2 / span 2;
+    }
+    .xl\:col-span-4 {
+      grid-column: span 4 / span 4;
     }
     .xl\:grid-cols-3 {
       grid-template-columns: repeat(3, minmax(0, 1fr));

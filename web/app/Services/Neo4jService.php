@@ -29,7 +29,9 @@ class Neo4jService
         $officer = $this->getResource('officers', $this->serviceId($actor));
         $checkpoint = $this->resourceFromReference('checkpoints', data_get($officer, 'stationed_at_id'));
         $troop = $this->resourceFromReference('troops', data_get($officer, 'troop_id'));
-        $reportingOfficer = $this->resourceFromReference('officers', data_get($officer, 'reports_to_id'));
+        $reportingOfficer = $this->isTopHierarchyOfficer($officer)
+            ? null
+            : $this->resourceFromReference('officers', data_get($officer, 'reports_to_id'));
 
         return [
             'soldier' => $officer,
@@ -95,6 +97,13 @@ class Neo4jService
         $chain = [];
         $current = $this->getResource('officers', $this->serviceId($actor));
 
+        if ($this->isTopHierarchyOfficer($current)) {
+            return [
+                'immediate' => null,
+                'chain' => [],
+            ];
+        }
+
         while ($current !== null && count($chain) < 25) {
             $reportsTo = data_get($current, 'reports_to_id');
             if (! is_string($reportsTo) || $reportsTo === '') {
@@ -130,7 +139,7 @@ class Neo4jService
         $officers = $this->items($this->get('/api/officers'));
         if ($actor->role === 'system_admin') {
             return array_map(
-                fn (array $officer): array => $this->enrichOfficer($officer),
+                fn (array $officer): array => $this->enrichPersonnelOfficer($officer),
                 $officers,
             );
         }
@@ -138,7 +147,7 @@ class Neo4jService
         $checkpointCode = $this->checkpointCode($actor);
 
         return array_values(array_map(
-            fn (array $officer): array => $this->enrichOfficer($officer),
+            fn (array $officer): array => $this->enrichPersonnelOfficer($officer),
             array_filter(
                 $officers,
                 fn (array $officer): bool => data_get($officer, 'stationed_at_id') === $checkpointCode,
@@ -266,7 +275,9 @@ class Neo4jService
         }
 
         $reportingId = data_get($officer, 'reports_to_id');
-        if (is_string($reportingId) && $reportingId !== '') {
+        if (! $this->isTopHierarchyOfficer($officer)
+            && is_string($reportingId)
+            && $reportingId !== '') {
             $reportingSoldier = Soldier::where('service_id', $reportingId)->first();
             $reportingUser = $reportingSoldier?->user;
 
@@ -276,6 +287,23 @@ class Neo4jService
         }
 
         return $officer;
+    }
+
+    private function enrichPersonnelOfficer(array $officer): array
+    {
+        $officer = $this->enrichOfficer($officer);
+        $checkpoint = $this->resourceFromReference('checkpoints', data_get($officer, 'stationed_at_id'));
+        $troop = $this->resourceFromReference('troops', data_get($officer, 'troop_id'));
+
+        $officer['checkpoint'] = $checkpoint;
+        $officer['troop'] = $troop;
+
+        return $officer;
+    }
+
+    private function isTopHierarchyOfficer(?array $officer): bool
+    {
+        return strtolower(trim((string) data_get($officer, 'rank'))) === 'general';
     }
 
     private function resourceFromReference(string $resource, mixed $identifier): ?array

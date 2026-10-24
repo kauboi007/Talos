@@ -1,9 +1,11 @@
 <?php
 
+use App\Models\User;
 use App\Services\Neo4jService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -14,7 +16,18 @@ class extends Component
     public array $metrics = [];
     public array $deployments = [];
     public array $threatEvents = [];
+    public array $users = [];
     public ?string $error = null;
+    public ?string $userNotice = null;
+    public ?string $editingUserId = null;
+    public string $firstName = '';
+    public string $lastName = '';
+    public string $phone = '';
+    public string $email = '';
+    public string $password = '';
+    public string $password_confirmation = '';
+    public string $role = 'soldier';
+    public string $status = 'active';
 
     public function mount(Neo4jService $neo4j): void
     {
@@ -57,10 +70,151 @@ class extends Component
             ];
             $this->deployments = data_get($data, 'deployments', []);
             $this->threatEvents = data_get($data, 'threat_events', []);
+            if (Auth::user()?->role === 'system_admin') {
+                $this->loadUsers();
+            }
         } catch (ConnectionException|RequestException $exception) {
             report($exception);
             $this->error = 'Dashboard data is temporarily unavailable from the CBS service.';
         }
+    }
+
+    public function startCreatingUser(): void
+    {
+        $this->authorizeUserManagement();
+        $this->resetUserForm();
+        $this->resetValidation();
+        $this->userNotice = null;
+    }
+
+    public function editUser(string $userId): void
+    {
+        $this->authorizeUserManagement();
+
+        $user = User::findOrFail($userId);
+        $this->editingUserId = (string) $user->getKey();
+        $this->firstName = (string) $user->firstName;
+        $this->lastName = (string) $user->lastName;
+        $this->phone = (string) $user->phone;
+        $this->email = (string) $user->email;
+        $this->password = '';
+        $this->password_confirmation = '';
+        $this->role = (string) $user->role;
+        $this->status = (string) $user->status;
+        $this->userNotice = null;
+        $this->resetValidation();
+    }
+
+    public function saveUser(): void
+    {
+        $this->authorizeUserManagement();
+
+        $rules = [
+            'firstName' => ['required', 'string', 'max:255'],
+            'lastName' => ['required', 'string', 'max:255'],
+            'phone' => [
+                'required',
+                'string',
+                'digits:10',
+                Rule::unique('users', 'phone')->ignore($this->editingUserId),
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($this->editingUserId),
+            ],
+            'role' => ['required', Rule::in([
+                'soldier',
+                'base_admin',
+                'hq_admin',
+                'system_admin',
+            ])],
+            'status' => ['required', Rule::in(['active', 'inactive', 'suspended'])],
+        ];
+
+        if ($this->editingUserId === null) {
+            $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
+        } elseif ($this->password !== '') {
+            $rules['password'] = ['string', 'min:8', 'confirmed'];
+        }
+
+        $validated = $this->validate($rules);
+        $user = $this->editingUserId
+            ? User::findOrFail($this->editingUserId)
+            : new User();
+
+        $user->firstName = $validated['firstName'];
+        $user->lastName = $validated['lastName'];
+        $user->phone = $validated['phone'];
+        $user->email = $validated['email'];
+        $user->role = $validated['role'];
+        $user->status = $validated['status'];
+
+        if ($this->password !== '') {
+            $user->password = $validated['password'];
+        }
+
+        $user->save();
+        $this->loadUsers();
+        $this->resetUserForm();
+        $this->resetValidation();
+        $this->userNotice = 'User record saved successfully.';
+    }
+
+    public function deleteUser(string $userId): void
+    {
+        $this->authorizeUserManagement();
+
+        $currentUser = Auth::user();
+        abort_unless($currentUser instanceof User, 403);
+        abort_if((string) $currentUser->getKey() === $userId, 422, 'You cannot delete your own account.');
+
+        $user = User::findOrFail($userId);
+        $user->soldier?->delete();
+        $user->delete();
+
+        if ($this->editingUserId === $userId) {
+            $this->resetUserForm();
+        }
+
+        $this->loadUsers();
+        $this->userNotice = 'User record deleted successfully.';
+    }
+
+    private function authorizeUserManagement(): void
+    {
+        abort_unless(Auth::user()?->role === 'system_admin', 403);
+    }
+
+    private function loadUsers(): void
+    {
+        $this->users = User::query()
+            ->orderBy('firstName')
+            ->get()
+            ->map(fn (User $user): array => [
+                'id' => (string) $user->getKey(),
+                'name' => $user->name(),
+                'phone' => $user->phone,
+                'email' => $user->email,
+                'role' => $user->role,
+                'status' => $user->status,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function resetUserForm(): void
+    {
+        $this->editingUserId = null;
+        $this->firstName = '';
+        $this->lastName = '';
+        $this->phone = '';
+        $this->email = '';
+        $this->password = '';
+        $this->password_confirmation = '';
+        $this->role = 'soldier';
+        $this->status = 'active';
     }
 };
 ?>
@@ -185,5 +339,130 @@ class extends Component
                 @endif
             </section>
         </div>
+
+        @if (Auth::user()?->role === 'system_admin')
+            <section id="user-administration" class="bg-primary-container border border-outline-variant rounded p-4 md:p-6">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-5 border-b border-outline-variant pb-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-on-surface">User Administration</h2>
+                        <p class="text-xs text-on-surface-variant mt-1">
+                            Create, update, and remove application user accounts.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        wire:click="startCreatingUser"
+                        class="bg-tertiary text-on-tertiary px-3 py-2 text-xs font-bold uppercase tracking-wider"
+                    >
+                        <x-lucide-user-plus class="inline-block w-4 h-4 mr-1" />
+                        New User
+                    </button>
+                </div>
+
+                @if ($userNotice)
+                    <div class="mb-4 border border-secure-border bg-secure-bg p-3 text-sm text-secure" role="status">
+                        {{ $userNotice }}
+                    </div>
+                @endif
+
+                <form wire:submit="saveUser" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                    <div>
+                        <label for="admin-first-name" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">First Name</label>
+                        <input id="admin-first-name" wire:model="firstName" type="text" class="tactical-input w-full px-3 py-2">
+                        @error('firstName') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-last-name" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Last Name</label>
+                        <input id="admin-last-name" wire:model="lastName" type="text" class="tactical-input w-full px-3 py-2">
+                        @error('lastName') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-phone" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Phone</label>
+                        <input id="admin-phone" wire:model="phone" type="text" inputmode="numeric" maxlength="10" class="tactical-input w-full px-3 py-2">
+                        @error('phone') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-email" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Email</label>
+                        <input id="admin-email" wire:model="email" type="email" class="tactical-input w-full px-3 py-2">
+                        @error('email') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-password" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                            Password {{ $editingUserId ? '(optional)' : '' }}
+                        </label>
+                        <input id="admin-password" wire:model="password" type="password" class="tactical-input w-full px-3 py-2">
+                        @error('password') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-password-confirmation" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Confirm Password</label>
+                        <input id="admin-password-confirmation" wire:model="password_confirmation" type="password" class="tactical-input w-full px-3 py-2">
+                    </div>
+                    <div>
+                        <label for="admin-role" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Role</label>
+                        <select id="admin-role" wire:model="role" class="tactical-input w-full px-3 py-2">
+                            @foreach (['soldier' => 'Soldier', 'base_admin' => 'Base Admin', 'hq_admin' => 'HQ Admin', 'system_admin' => 'System Admin'] as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('role') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-status" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Status</label>
+                        <select id="admin-status" wire:model="status" class="tactical-input w-full px-3 py-2">
+                            @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'suspended' => 'Suspended'] as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('status') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="md:col-span-2 xl:col-span-4 flex gap-3">
+                        <button type="submit" class="bg-tertiary text-on-tertiary px-4 py-2 text-xs font-bold uppercase tracking-wider">
+                            {{ $editingUserId ? 'Update User' : 'Create User' }}
+                        </button>
+                        @if ($editingUserId)
+                            <button type="button" wire:click="startCreatingUser" class="border border-outline-variant px-4 py-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                                Cancel
+                            </button>
+                        @endif
+                    </div>
+                </form>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[760px] text-left">
+                        <thead>
+                            <tr class="border-b border-outline-variant text-[10px] uppercase tracking-wider text-on-surface-variant">
+                                <th class="p-3">Name</th>
+                                <th class="p-3">Email</th>
+                                <th class="p-3">Phone</th>
+                                <th class="p-3">Role</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($users as $managedUser)
+                                <tr wire:key="managed-user-{{ $managedUser['id'] }}" class="border-b border-outline-variant/70">
+                                    <td class="p-3 text-sm text-on-surface">{{ $managedUser['name'] }}</td>
+                                    <td class="p-3 text-sm text-on-surface-variant">{{ $managedUser['email'] }}</td>
+                                    <td class="p-3 font-mono-data text-xs text-on-surface-variant">{{ $managedUser['phone'] }}</td>
+                                    <td class="p-3 text-xs uppercase text-tertiary">{{ str($managedUser['role'])->replace('_', ' ') }}</td>
+                                    <td class="p-3 text-xs uppercase text-on-surface-variant">{{ $managedUser['status'] }}</td>
+                                    <td class="p-3 text-right whitespace-nowrap">
+                                        <button type="button" wire:click="editUser('{{ $managedUser['id'] }}')" class="text-xs font-semibold text-tertiary hover:text-tertiary-fixed">
+                                            Edit
+                                        </button>
+                                        @if ((string) Auth::user()->getKey() !== $managedUser['id'])
+                                            <button type="button" wire:click="deleteUser('{{ $managedUser['id'] }}')" wire:confirm="Delete this user account?" class="ml-3 text-xs font-semibold text-error hover:underline">
+                                                Delete
+                                            </button>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        @endif
     @endif
 </div>

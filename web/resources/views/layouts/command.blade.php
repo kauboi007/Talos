@@ -63,6 +63,8 @@
         'system_admin',
         'hq_admin',
     ], true);
+
+    $canManageUsers = $role === 'system_admin';
 @endphp
 
 <div
@@ -176,6 +178,20 @@
                 >
                     <x-lucide-users class="w-5 h-5" />
                     Personnel
+                </a>
+            @endif
+
+            @if ($canManageUsers)
+                <a
+                    href="{{ route('dashboard') }}#user-administration"
+                    wire:navigate
+                    @click="sidebarOpen = false"
+                    class="flex items-center gap-4 px-4 py-3 text-sm
+                           text-on-surface-variant hover:bg-surface-variant
+                           hover:text-on-surface transition-colors"
+                >
+                    <x-lucide-user-cog class="w-5 h-5" />
+                    Manage Users
                 </a>
             @endif
 
