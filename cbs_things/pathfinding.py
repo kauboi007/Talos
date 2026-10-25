@@ -106,10 +106,6 @@ def astar(start, goal, graph, coords, speed_kmh=50.0, constraints=None, max_iter
 
 
 def find_conflict(path_a, path_b):
-    """
-    Identifies interval overlap conflicts between two troop paths.
-    Assumes final goal node is occupied indefinitely [arr_time, ∞).
-    """
     for idx_a, (node_a, arr_a, dep_a) in enumerate(path_a):
         eff_dep_a = float("inf") if idx_a == len(path_a) - 1 else dep_a
 
@@ -120,7 +116,6 @@ def find_conflict(path_a, path_b):
                 overlap_start = max(arr_a, arr_b)
                 overlap_end = min(eff_dep_a, eff_dep_b)
 
-                # Ignore identical end-points if both troops have completed their mission at their designated goals
                 if idx_a == len(path_a) - 1 and idx_b == len(path_b) - 1:
                     continue
 
