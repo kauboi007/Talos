@@ -1,0 +1,17 @@
+# .env
+# .env.*
+!.env.example
+.git
+.gitignore
+Dockerfile*
+docker/
+!docker/
+!docker/entrypoint.sh
+storage/logs/
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+tests/
+vendor/
+public/build/
+public/hot

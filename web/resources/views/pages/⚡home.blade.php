@@ -136,18 +136,6 @@ class extends Component {
                         <x-lucide-layout-dashboard class="w-[18px] h-[18px]" />
                         <span>GO TO DASHBOARD</span>
                     </a>
-
-                    @auth
-                        <a
-                            {{-- href="{{ route('routing') }}" --}}
-                            href="/routing"
-                            class="px-4 py-3 bg-transparent border border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline rounded text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
-                        >
-                            <x-lucide-map class="w-[18px] h-[18px]" />
-                            <span>VIEW TACTICAL MAP</span>
-                        </a>
-                    @endauth
-
                 </div>
             </div>
 
