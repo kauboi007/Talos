@@ -18,6 +18,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:hq_admin')->group(function () {
         Route::livewire('/missions/create', 'pages::mission-create')->name('missions.create');
     });
+    Route::livewire('/missions/{mission}', 'pages::mission-show')->name('missions.show');
 
     Route::delete('/logout', function () {
         Auth::logout();

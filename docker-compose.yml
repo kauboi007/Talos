@@ -58,7 +58,15 @@ services:
     networks:
       - talos-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://python_cbs:8001/"]
+      test: >
+        python3 -c "
+        import urllib.request, json, sys;
+        try:
+            res = json.loads(urllib.request.urlopen('http://python_cbs:8001/health').read());
+            sys.exit(0 if res.get('status') == 'ok' else 1)
+        except Exception:
+            sys.exit(1)
+        "
       interval: 30s
       timeout: 10s
       retries: 3

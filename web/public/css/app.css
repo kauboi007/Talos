@@ -448,6 +448,9 @@
   .h-\[45vw\] {
     height: 45vw;
   }
+  .h-\[480px\] {
+    height: 480px;
+  }
   .h-\[620px\] {
     height: 620px;
   }
@@ -543,6 +546,9 @@
   }
   .min-w-0 {
     min-width: 0px;
+  }
+  .min-w-\[420px\] {
+    min-width: 420px;
   }
   .min-w-\[520px\] {
     min-width: 520px;
@@ -780,6 +786,18 @@
   }
   .border-secure-border {
     border-color: var(--color-secure-border);
+  }
+  .border-secure\/30 {
+    border-color: color-mix(in srgb, #15803d 30%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-secure) 30%, transparent);
+    }
+  }
+  .border-secure\/40 {
+    border-color: color-mix(in srgb, #15803d 40%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-secure) 40%, transparent);
+    }
   }
   .border-tertiary {
     border-color: var(--color-tertiary);
@@ -1258,6 +1276,9 @@
     .hover\:border-outline:hover {
       border-color: var(--color-outline);
     }
+    .hover\:border-tertiary:hover {
+      border-color: var(--color-tertiary);
+    }
     .hover\:bg-error-container:hover {
       background-color: var(--color-error-container);
     }
@@ -1454,6 +1475,9 @@
     }
     .xl\:col-span-4 {
       grid-column: span 4 / span 4;
+    }
+    .xl\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .xl\:grid-cols-3 {
       grid-template-columns: repeat(3, minmax(0, 1fr));

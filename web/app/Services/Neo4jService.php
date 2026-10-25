@@ -82,7 +82,7 @@ class Neo4jService
             'operational_checkpoint_count' => count(array_filter(
                 $checkpoints,
                 fn (array $checkpoint): bool => in_array(
-                    strtolower((string) data_get($checkpoint, 'status')),
+                    strtolower((string) data_get($checkpoint, 'status', 'active')),
                     ['open', 'active', 'operational'],
                     true,
                 ),

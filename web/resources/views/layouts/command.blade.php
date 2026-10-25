@@ -59,11 +59,6 @@
         'hq_admin',
     ], true);
 
-    $canManageSettings = in_array($role, [
-        'system_admin',
-        'hq_admin',
-    ], true);
-
     $canManageUsers = $role === 'system_admin';
 @endphp
 
@@ -224,20 +219,6 @@
                 >
                     <x-lucide-route class="w-5 h-5" />
                     Plan CBS Mission
-                </a>
-            @endif
-
-            @if ($canManageSettings)
-                <a
-                    href="/settings"
-                    wire:navigate
-                    @click="sidebarOpen = false"
-                    class="flex items-center gap-4 px-4 py-3 text-sm
-                           text-on-surface-variant hover:bg-surface-variant
-                           hover:text-on-surface transition-colors"
-                >
-                    <x-lucide-settings class="w-5 h-5" />
-                    Settings
                 </a>
             @endif
         </nav>

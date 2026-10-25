@@ -1,8 +1,10 @@
 <?php
 
+use App\Models\Mission;
 use App\Services\Neo4jService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -15,7 +17,9 @@ class extends Component
     public array $missionRows = [
         ['troop_id' => '', 'start' => '', 'end' => ''],
     ];
+    public string $missionName = '';
     public ?array $result = null;
+    public array $approvedTroops = [];
     public ?string $error = null;
 
     public function mount(Neo4jService $neo4j): void
@@ -57,11 +61,62 @@ class extends Component
 
         try {
             $this->result = $neo4j->planMission($validated['missionRows']);
+            $this->approvedTroops = [];
         } catch (ConnectionException|RequestException $exception) {
             report($exception);
-            $this->error = $exception->response?->json('detail')
-                ?? 'CBS mission planning is temporarily unavailable.';
+            $detail = $exception instanceof RequestException
+                ? $exception->response?->json('detail')
+                : null;
+            $this->error = is_string($detail)
+                ? $detail
+                : ($exception instanceof RequestException
+                    ? 'CBS mission planning failed.'
+                    : 'CBS mission planning is temporarily unavailable.');
         }
+    }
+
+    public function approveTroop(string $troopName): void
+    {
+        $plan = null;
+        foreach (data_get($this->result, 'plans', []) as $candidate) {
+            if (data_get($candidate, 'troop_name') === $troopName) {
+                $plan = $candidate;
+                break;
+            }
+        }
+
+        if (! is_array($plan) || ! is_string($troopName) || $troopName === '') {
+            $this->error = 'The selected troop plan is invalid.';
+            return;
+        }
+
+        if (! data_get($this->result, 'feasible', false)) {
+            $this->error = 'Only feasible troop plans can be approved.';
+            return;
+        }
+
+        if (in_array($troopName, $this->approvedTroops, true)) {
+            return;
+        }
+
+        $mission = Mission::create([
+            'name' => $this->missionName !== ''
+                ? $this->missionName
+                : 'Mission '.now()->format('Y-m-d H:i'),
+            'troop_name' => $troopName,
+            'created_by' => Auth::id(),
+            'approved_by' => Auth::id(),
+            'approved_at' => now(),
+            'status' => 'approved',
+            'feasible' => true,
+            'planning_result' => [
+                'feasible' => true,
+                'plan' => $plan,
+            ],
+        ]);
+
+        $this->approvedTroops[] = $troopName;
+        session()->flash('mission_notice', "{$troopName} mission approved.");
     }
 };
 ?>
@@ -73,13 +128,18 @@ class extends Component
         </p>
         <h1 class="mt-1 text-2xl font-bold tracking-tight text-on-surface">Create CBS Mission</h1>
         <p class="mt-1 text-sm text-on-surface-variant">
-            Submit troop routes to the CBS planner. Results are displayed here and are not persisted yet.
+            Submit troop routes to the CBS planner. The response is persisted for dashboard review.
         </p>
     </div>
 
     @if ($error)
         <div class="border border-error/30 bg-error-container p-4 text-sm text-error" role="alert">
             {{ $error }}
+        </div>
+    @endif
+    @if (session('mission_notice'))
+        <div class="border border-secure/30 bg-secure-container p-4 text-sm text-secure" role="status">
+            {{ session('mission_notice') }}
         </div>
     @endif
 
@@ -100,6 +160,10 @@ class extends Component
         </div>
 
         <form wire:submit="plan" class="space-y-4">
+            <div>
+                <label class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Mission name</label>
+                <input wire:model="missionName" type="text" class="tactical-input w-full px-3 py-3" placeholder="Planned Mission's name">
+            </div>
             @foreach ($missionRows as $index => $row)
                 <div wire:key="mission-row-{{ $index }}" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div>
@@ -163,12 +227,21 @@ class extends Component
             @else
                 <div class="space-y-5">
                     @foreach (data_get($result, 'plans', []) as $plan)
-                        <article class="border border-outline-variant p-4">
+                        <article wire:key="planned-troop-{{ $loop->index }}" class="border border-outline-variant p-4">
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                                 <div><p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Troop</p><p class="mt-1 text-sm font-semibold text-on-surface">{{ data_get($plan, 'troop_name', '—') }}</p></div>
                                 <div><p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Speed</p><p class="mt-1 text-sm font-semibold text-on-surface">{{ data_get($plan, 'speed_kmh', '—') }} km/h</p></div>
                                 <div><p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Travel time</p><p class="mt-1 text-sm font-semibold text-on-surface">{{ data_get($plan, 'total_time_hr', '—') }} hr</p></div>
                                 <div><p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Threat exposure</p><p class="mt-1 text-sm font-semibold text-on-surface">{{ data_get($plan, 'threat_exposure', '—') }}</p></div>
+                            </div>
+                            <div class="mb-4">
+                                @if (in_array(data_get($plan, 'troop_name'), $approvedTroops, true))
+                                    <span class="text-xs font-bold uppercase text-secure">Approved</span>
+                                @else
+                                    <button type="button" wire:click="approveTroop('{{ data_get($plan, 'troop_name') }}')" class="bg-tertiary text-on-tertiary px-3 py-2 text-[10px] font-bold uppercase tracking-wider">
+                                        Approve mission
+                                    </button>
+                                @endif
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full min-w-[520px] text-left">

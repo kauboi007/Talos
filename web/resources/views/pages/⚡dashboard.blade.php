@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Models\Soldier;
+use App\Models\Mission;
 use App\Services\Neo4jService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -16,6 +18,7 @@ class extends Component
     public array $metrics = [];
     public array $deployments = [];
     public array $threatEvents = [];
+    public array $missions = [];
     public array $users = [];
     public ?string $error = null;
     public ?string $userNotice = null;
@@ -28,6 +31,14 @@ class extends Component
     public string $password_confirmation = '';
     public string $role = 'soldier';
     public string $status = 'active';
+    public string $service_id = '';
+    public string $dob = '';
+    public string $bloodGroup = 'A+';
+    public string $street = '';
+    public string $city = '';
+    public string $state = '';
+    public string $pincode = '';
+    public string $rank = '';
 
     public function mount(Neo4jService $neo4j): void
     {
@@ -70,13 +81,32 @@ class extends Component
             ];
             $this->deployments = data_get($data, 'deployments', []);
             $this->threatEvents = data_get($data, 'threat_events', []);
+            $this->loadMissions($neo4j);
             if (Auth::user()?->role === 'system_admin') {
                 $this->loadUsers();
             }
+
         } catch (ConnectionException|RequestException $exception) {
             report($exception);
             $this->error = 'Dashboard data is temporarily unavailable from the CBS service.';
         }
+    }
+
+    private function loadMissions(Neo4jService $neo4j): void
+    {
+        $missions = Mission::query()->latest()->limit(20)->get();
+
+        $this->missions = $missions->map(fn (Mission $mission): array => [
+            'id' => (string) $mission->getKey(),
+            'name' => $mission->name,
+            'troop_name' => $mission->troop_name
+                ?? data_get($mission->planning_result, 'plan.troop_name', '—'),
+            'status' => $mission->status,
+            'feasible' => $mission->feasible,
+            'created_at' => $mission->created_at?->format('Y-m-d H:i'),
+        ])->all();
+        $this->metrics[0]['value'] = (string) $missions->where('status', 'approved')->count();
+        $this->metrics[0]['detail'] = 'Persisted mission plans';
     }
 
     public function startCreatingUser(): void
@@ -101,6 +131,15 @@ class extends Component
         $this->password_confirmation = '';
         $this->role = (string) $user->role;
         $this->status = (string) $user->status;
+        $soldier = $user->soldier;
+        $this->service_id = (string) ($soldier?->service_id ?? '');
+        $this->dob = $soldier?->dob?->format('Y-m-d') ?? '';
+        $this->bloodGroup = (string) ($soldier?->bloodGroup ?? 'A+');
+        $this->street = (string) ($soldier?->street ?? '');
+        $this->city = (string) ($soldier?->city ?? '');
+        $this->state = (string) ($soldier?->state ?? '');
+        $this->pincode = (string) ($soldier?->pincode ?? '');
+        $this->rank = (string) ($soldier?->rank ?? '');
         $this->userNotice = null;
         $this->resetValidation();
     }
@@ -131,6 +170,21 @@ class extends Component
                 'system_admin',
             ])],
             'status' => ['required', Rule::in(['active', 'inactive', 'suspended'])],
+            'service_id' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('soldiers', 'service_id')->ignore(
+                    $this->editingUserId ? User::find($this->editingUserId)?->soldier?->service_id : null,
+                ),
+            ],
+            'dob' => ['required', 'date', 'before:today'],
+            'bloodGroup' => ['required', Rule::in(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])],
+            'street' => ['required', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
+            'state' => ['required', 'string', 'max:255'],
+            'pincode' => ['required', 'string', 'max:20'],
+            'rank' => ['required', 'string', 'max:255'],
         ];
 
         if ($this->editingUserId === null) {
@@ -155,7 +209,29 @@ class extends Component
             $user->password = $validated['password'];
         }
 
-        $user->save();
+        $isNewUser = $this->editingUserId === null;
+
+        try {
+            $user->save();
+
+            $soldier = $user->soldier ?? new Soldier();
+            $soldier->service_id = $validated['service_id'];
+            $soldier->user_id = $user->getKey();
+            $soldier->dob = $validated['dob'];
+            $soldier->bloodGroup = $validated['bloodGroup'];
+            $soldier->street = $validated['street'];
+            $soldier->city = $validated['city'];
+            $soldier->state = $validated['state'];
+            $soldier->pincode = $validated['pincode'];
+            $soldier->rank = $validated['rank'];
+            $soldier->save();
+        } catch (\Throwable $exception) {
+            if ($isNewUser && $user->exists) {
+                $user->delete();
+            }
+
+            throw $exception;
+        }
         $this->loadUsers();
         $this->resetUserForm();
         $this->resetValidation();
@@ -215,6 +291,14 @@ class extends Component
         $this->password_confirmation = '';
         $this->role = 'soldier';
         $this->status = 'active';
+        $this->service_id = '';
+        $this->dob = '';
+        $this->bloodGroup = 'A+';
+        $this->street = '';
+        $this->city = '';
+        $this->state = '';
+        $this->pincode = '';
+        $this->rank = '';
     }
 };
 ?>
@@ -222,8 +306,8 @@ class extends Component
 <div class="p-4 md:p-6 space-y-6">
     @if ($error)
         <div class="border border-error/30 bg-error-container p-4 text-sm text-error" role="alert">
-            {{ $error }}
-        </div>
+                {{ $error }}
+            </div>
     @else
         <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             @foreach ($metrics as $metric)
@@ -340,6 +424,32 @@ class extends Component
             </section>
         </div>
 
+        <section class="bg-primary-container border border-outline-variant rounded p-4 md:p-6">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-5 border-b border-outline-variant pb-3">
+                <div>
+                    <h2 class="text-lg font-semibold text-on-surface">Missions</h2>
+                    <p class="text-xs text-on-surface-variant mt-1">Persisted CBS mission plans</p>
+                </div>
+                <span class="font-mono-data text-[10px] text-tertiary">{{ count($missions) }} STORED</span>
+            </div>
+
+            @if (count($missions) === 0)
+                <p class="text-sm text-on-surface-variant">No missions have been planned yet.</p>
+            @else
+                <div class="space-y-2">
+                        @foreach ($missions as $mission)
+                            <a href="{{ route('missions.show', ['mission' => $mission['id']]) }}" wire:navigate class="block w-full text-left border p-3 border-outline-variant bg-surface hover:border-tertiary">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-sm font-semibold text-on-surface">{{ $mission['name'] }} <span class="font-normal text-on-surface-variant">/ {{ $mission['troop_name'] }}</span></span>
+                                    <span class="text-[10px] uppercase {{ $mission['feasible'] ? 'text-secure' : 'text-error' }}">{{ $mission['status'] }}</span>
+                                </div>
+                                <p class="mt-1 text-[10px] font-mono-data text-on-surface-variant">{{ $mission['created_at'] }}</p>
+                            </a>
+                        @endforeach
+                </div>
+            @endif
+        </section>
+
         @if (Auth::user()?->role === 'system_admin')
             <section id="user-administration" class="bg-primary-container border border-outline-variant rounded p-4 md:p-6">
                 <div class="flex flex-wrap items-center justify-between gap-3 mb-5 border-b border-outline-variant pb-3">
@@ -414,6 +524,50 @@ class extends Component
                             @endforeach
                         </select>
                         @error('status') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-service-id" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Service ID</label>
+                        <input id="admin-service-id" wire:model="service_id" type="text" class="tactical-input w-full px-3 py-2">
+                        @error('service_id') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-dob" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Date of Birth</label>
+                        <input id="admin-dob" wire:model="dob" type="date" class="tactical-input w-full px-3 py-2">
+                        @error('dob') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-blood-group" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Blood Group</label>
+                        <select id="admin-blood-group" wire:model="bloodGroup" class="tactical-input w-full px-3 py-2">
+                            @foreach (['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as $group)
+                                <option value="{{ $group }}">{{ $group }}</option>
+                            @endforeach
+                        </select>
+                        @error('bloodGroup') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-rank" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Rank</label>
+                        <input id="admin-rank" wire:model="rank" type="text" class="tactical-input w-full px-3 py-2">
+                        @error('rank') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-street" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Street</label>
+                        <input id="admin-street" wire:model="street" type="text" class="tactical-input w-full px-3 py-2">
+                        @error('street') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-city" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">City</label>
+                        <input id="admin-city" wire:model="city" type="text" class="tactical-input w-full px-3 py-2">
+                        @error('city') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-state" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">State</label>
+                        <input id="admin-state" wire:model="state" type="text" class="tactical-input w-full px-3 py-2">
+                        @error('state') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="admin-pincode" class="block mb-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Pincode</label>
+                        <input id="admin-pincode" wire:model="pincode" type="text" class="tactical-input w-full px-3 py-2">
+                        @error('pincode') <p class="mt-1 text-xs text-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="md:col-span-2 xl:col-span-4 flex gap-3">
                         <button type="submit" class="bg-tertiary text-on-tertiary px-4 py-2 text-xs font-bold uppercase tracking-wider">

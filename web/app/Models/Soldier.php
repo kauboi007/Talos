@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use MongoDB\Laravel\Eloquent\Model;
 
-#[Fillable(['service_id', 'dob', 'blood_group', 'street', 'city', 'state', 'pincode', 'rank'])]
+#[Fillable(['service_id', 'user_id', 'dob', 'bloodGroup', 'street', 'city', 'state', 'pincode', 'rank'])]
 class Soldier extends Model
 {
     protected $keyType = 'string';
 
-    public $incrementing = 'false';
+    public $incrementing = false;
 
     protected function casts(): array
     {
