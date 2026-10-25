@@ -1,7 +1,3 @@
-#changed the CBS to be continous time intervals instead of  time ticks
-#conflict now means 2 troops are in teh same node in a time interval
-
-
 import math
 import heapq
 
@@ -9,7 +5,7 @@ waitcost_per_hour = 0.05
 
 
 def haversine(lat1, lng1, lat2, lng2):
-    r = 6371.0  # Earth radius in kilometers
+    r = 6371.0 
     lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
     dlat = lat2 - lat1
     dlng = lng2 - lng1
@@ -33,58 +29,104 @@ def is_interval_constrained(node, arr_time, dep_time, constraints):
     return False
 
 
-def astar(start, goal, graph, coords, speed_kmh=50.0, constraints=None):
+def astar(start, goal, graph, coords, speed_kmh=50.0, constraints=None, max_iterations=50000):
     if constraints is None:
         constraints = set()
-    open_set = [(0.0, start, 0.0)] 
+
+    open_set = [(0.0, start, 0.0)]
     g_score = {(start, 0.0): 0.0}
     came_from = {}
+
+    iterations = 0
     while open_set:
+        #wait check 0
+        iterations += 1
+        if iterations > max_iterations:
+            return None, float("inf")
         _, current, arr_t = heapq.heappop(open_set)
+
         if current == goal:
-            path = []
+            states = []
             curr_state = (current, arr_t)
+            curr_dep = arr_t
+
             while curr_state in came_from:
-                prev_state, dep_t = came_from[curr_state]
-                path.append((curr_state[0], curr_state[1], dep_t))
-                curr_state = prev_state
-            path.append((start, 0.0, path[-1][1] if path else 0.0))
-            path.reverse()
-            return path, arr_t
+                prev_node, prev_arr, dep_from_prev = came_from[curr_state]
+                states.append((curr_state[0], curr_state[1], curr_dep))
+                curr_state = (prev_node, prev_arr)
+                curr_dep = dep_from_prev
+
+            states.append((start, 0.0, curr_dep))
+            states.reverse()
+            collapsed_path = []
+            for node, arr, dep in states:
+                if collapsed_path and collapsed_path[-1][0] == node:
+                    collapsed_path[-1] = (node, collapsed_path[-1][1], dep)
+                else:
+                    collapsed_path.append((node, arr, dep))
+
+            return collapsed_path, arr_t
+
         for neighbor, dist_km in graph.get(current, []):
             travel_time = dist_km / speed_kmh if speed_kmh > 0 else dist_km
-            dep_t = arr_t
-            next_arr_t = dep_t + travel_time
-            if is_interval_constrained(neighbor, arr_t, next_arr_t, constraints):
-                continue
-            tentative_g = g_score.get((current, arr_t), float("inf")) + travel_time
-            state_key = (neighbor, next_arr_t)
-            if tentative_g < g_score.get(state_key, float("inf")):
-                g_score[state_key] = tentative_g
-                f_score = tentative_g + heuristic_time(neighbor, goal, coords, speed_kmh)
-                came_from[state_key] = ((current, arr_t), dep_t)
-                heapq.heappush(open_set, (f_score, neighbor, next_arr_t))
-        wait_step = 0.1  
-        wait_arr_t = arr_t + wait_step
-        if not is_interval_constrained(current, arr_t, wait_arr_t, constraints):
-            tentative_g = g_score.get((current, arr_t), float("inf")) + wait_step + waitcost_per_hour
-            state_key = (current, wait_arr_t)
-            if tentative_g < g_score.get(state_key, float("inf")):
-                g_score[state_key] = tentative_g
-                f_score = tentative_g + heuristic_time(current, goal, coords, speed_kmh)
-                came_from[state_key] = ((current, arr_t), wait_arr_t)
-                heapq.heappush(open_set, (f_score, current, wait_arr_t))
+            candidate_deps = {arr_t}
+            if constraints:
+                for c_node, c_start, c_end in constraints:
+                    if c_node == neighbor:
+                        dep_needed = c_end - travel_time
+                        if dep_needed > arr_t:
+                            candidate_deps.add(dep_needed)
+                    if c_node == current:
+                        if c_end > arr_t:
+                            candidate_deps.add(c_end)
+
+            for dep_t in sorted(candidate_deps):
+                wait_time = dep_t - arr_t
+                if wait_time < 0:
+                    continue
+
+                #wait check 1
+                if wait_time > 1e-9 and is_interval_constrained(current, arr_t, dep_t, constraints):
+                    continue
+                next_arr_t = dep_t + travel_time
+
+                if is_interval_constrained(neighbor, next_arr_t, next_arr_t + 1e-6, constraints):
+                    continue
+                edge_cost = travel_time + wait_time * (1.0 + waitcost_per_hour)
+                tentative_g = g_score.get((current, arr_t), float("inf")) + edge_cost
+                state_key = (neighbor, next_arr_t)
+
+                if tentative_g < g_score.get(state_key, float("inf")):
+                    g_score[state_key] = tentative_g
+                    f_score = tentative_g + heuristic_time(neighbor, goal, coords, speed_kmh)
+                    came_from[state_key] = (current, arr_t, dep_t)
+                    heapq.heappush(open_set, (f_score, neighbor, next_arr_t))
+
     return None, float("inf")
 
 
 def find_conflict(path_a, path_b):
-    for node_a, arr_a, dep_a in path_a:
-        for node_b, arr_b, dep_b in path_b:
+    """
+    Identifies interval overlap conflicts between two troop paths.
+    Assumes final goal node is occupied indefinitely [arr_time, ∞).
+    """
+    for idx_a, (node_a, arr_a, dep_a) in enumerate(path_a):
+        eff_dep_a = float("inf") if idx_a == len(path_a) - 1 else dep_a
+
+        for idx_b, (node_b, arr_b, dep_b) in enumerate(path_b):
+            eff_dep_b = float("inf") if idx_b == len(path_b) - 1 else dep_b
+
             if node_a == node_b:
                 overlap_start = max(arr_a, arr_b)
-                overlap_end = min(dep_a, dep_b)
-                if overlap_start < overlap_end and overlap_end > 0.001:
+                overlap_end = min(eff_dep_a, eff_dep_b)
+
+                # Ignore identical end-points if both troops have completed their mission at their designated goals
+                if idx_a == len(path_a) - 1 and idx_b == len(path_b) - 1:
+                    continue
+
+                if overlap_start < overlap_end and (overlap_end - overlap_start) > 1e-4:
                     return (node_a, overlap_start, overlap_end)
+
     return None
 
 
