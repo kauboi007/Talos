@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Mission;
 use App\Models\Transport;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Redis;
@@ -11,7 +12,7 @@ class ConsumeCbsRequests extends Command
 {
     protected $signature = 'talos:cbs-worker';
 
-    protected $description = 'Consume CBS vehicle speed requests from Redis Streams';
+    protected $description = 'Consume CBS Redis requests from Python';
 
     public function handle(): int
     {
@@ -45,27 +46,19 @@ class ConsumeCbsRequests extends Command
                 [$entryId, $fields] = $entry;
                 $lastId = $entryId;
                 $correlationId = $fields['correlation_id'] ?? '';
-                $vehicleId = $fields['vehicle_id'] ?? '';
 
-                if ($correlationId === '' || $vehicleId === '') {
+                if ($correlationId === '') {
                     continue;
                 }
 
-                $response = [
-                    'correlation_id' => $correlationId,
-                    'vehicle_id' => $vehicleId,
-                ];
-
                 try {
-                    $transport = Transport::find($vehicleId);
-                    if (! $transport) {
-                        throw new \RuntimeException("Transport [{$vehicleId}] was not found.");
-                    }
-
-                    $response['speed_kmh'] = (string) $transport->speed_kmh;
+                    $response = $this->handleRequest($fields);
                 } catch (Throwable $exception) {
                     report($exception);
-                    $response['error'] = $exception->getMessage();
+                    $response = [
+                        'correlation_id' => $correlationId,
+                        'error' => $exception->getMessage(),
+                    ];
                 }
 
                 try {
@@ -80,7 +73,64 @@ class ConsumeCbsRequests extends Command
                     $this->error('Redis response stream unavailable: '.$exception->getMessage());
                 }
             }
+
         }
+    }
+
+    private function handleRequest(array $fields): array
+    {
+        $correlationId = (string) $fields['correlation_id'];
+        $requestType = $fields['request_type'] ?? (
+            isset($fields['vehicle_id']) ? 'vehicle_speed' : ''
+        );
+
+        return match ($requestType) {
+            'vehicle_speed' => $this->vehicleSpeedResponse($correlationId, (string) ($fields['vehicle_id'] ?? '')),
+            'persisted_missions' => $this->persistedMissionsResponse($correlationId),
+            default => throw new \InvalidArgumentException('Unsupported CBS request type.'),
+        };
+    }
+
+    private function vehicleSpeedResponse(string $correlationId, string $vehicleId): array
+    {
+        if ($vehicleId === '') {
+            throw new \InvalidArgumentException('Vehicle ID is required.');
+        }
+
+        $transport = Transport::find($vehicleId);
+        if (! $transport) {
+            throw new \RuntimeException("Transport [{$vehicleId}] was not found.");
+        }
+
+        return [
+            'correlation_id' => $correlationId,
+            'vehicle_id' => $vehicleId,
+            'speed_kmh' => (string) $transport->speed_kmh,
+        ];
+    }
+
+    private function persistedMissionsResponse(string $correlationId): array
+    {
+        $missions = Mission::query()
+            ->latest()
+            ->get()
+            ->map(fn (Mission $mission): array => [
+                'id' => (string) $mission->getKey(),
+                'name' => $mission->name,
+                'troop_name' => $mission->troop_name,
+                'status' => $mission->status,
+                'feasible' => (bool) $mission->feasible,
+                'created_at' => $mission->created_at?->toISOString(),
+                'approved_at' => $mission->approved_at?->toISOString(),
+                'plan' => data_get($mission->planning_result, 'plan', []),
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'correlation_id' => $correlationId,
+            'missions' => json_encode($missions, JSON_THROW_ON_ERROR),
+        ];
     }
 
     private function entries(mixed $result, string $stream): array
