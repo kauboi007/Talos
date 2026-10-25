@@ -15,19 +15,20 @@ class TreeNode:
         return (self.cost, self.id) < (other.cost, other.id)
 
 
-def build_root(troops, speeds, graph, coords):
+def build_root(troops, speeds, graph, coords, reserved=()):
     paths = {}
     cost = 0.0
     constraints = {}
     per_troop_costs = {}
     for t_id, (start, end) in troops.items():
         sp = speeds.get(t_id, 50.0)
-        p, tcost = astar(start, end, graph, coords, speed_kmh=sp)
+        base = set(reserved)
+        p, tcost = astar(start, end, graph, coords, speed_kmh=sp, constraints=set(base))
         if p is None:
             raise ValueError(f"Path for troop '{t_id}' returned None")
         paths[t_id] = p
         cost += tcost
-        constraints[t_id] = set()
+        constraints[t_id] = base
         per_troop_costs[t_id] = tcost
     return TreeNode(paths, cost, constraints, per_troop_costs)
 
@@ -59,8 +60,8 @@ def make_child(parent, troop_id, ban, speeds, graph, coords, start, goal):
     return TreeNode(local_paths, cost, local_cons, local_cpn)
 
 
-def cbs(troops, speeds, graph, coords, limit=5000):
-    root_node = build_root(troops, speeds, graph, coords)
+def cbs(troops, speeds, graph, coords, limit=5000,reserved=None):
+    root_node = build_root(troops, speeds, graph, coords,reserved or [])
     heap = [root_node]
     currexp = 0
     while heap:

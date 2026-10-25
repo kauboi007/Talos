@@ -105,23 +105,17 @@ def astar(start, goal, graph, coords, speed_kmh=50.0, constraints=None, max_iter
     return None, float("inf")
 
 
+CONFLICT_BUFFER_HR = 0.05
+
 def find_conflict(path_a, path_b):
-    for idx_a, (node_a, arr_a, dep_a) in enumerate(path_a):
-        eff_dep_a = float("inf") if idx_a == len(path_a) - 1 else dep_a
-
-        for idx_b, (node_b, arr_b, dep_b) in enumerate(path_b):
-            eff_dep_b = float("inf") if idx_b == len(path_b) - 1 else dep_b
-
-            if node_a == node_b:
-                overlap_start = max(arr_a, arr_b)
-                overlap_end = min(eff_dep_a, eff_dep_b)
-
-                if idx_a == len(path_a) - 1 and idx_b == len(path_b) - 1:
-                    continue
-
-                if overlap_start < overlap_end and (overlap_end - overlap_start) > 1e-4:
-                    return (node_a, overlap_start, overlap_end)
-
+    for node_a, arr_a, dep_a in path_a:
+        for node_b, arr_b, dep_b in path_b:
+            if node_a != node_b:
+                continue
+            overlap_start = max(arr_a, arr_b)
+            overlap_end = min(dep_a, dep_b) + CONFLICT_BUFFER_HR
+            if overlap_start < overlap_end and (overlap_end - overlap_start) > 1e-4:
+                return (node_a, overlap_start, overlap_end)
     return None
 
 

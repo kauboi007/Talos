@@ -7,11 +7,10 @@ from fastapi import Body, FastAPI, HTTPException, Response
 from neo4j import GraphDatabase
 from neo4j.exceptions import ConstraintError
 from pydantic import BaseModel
-
+from laravel_comm import fetch_all_troop_speeds_from_laravel, get_persisted_missions
 from high_level_cbs import cbs
 from pathfinding import assess_threat
 from data_loader import get_subgraph, get_threats, get_coords
-from laravel_comm import fetch_all_troop_speeds_from_laravel
 
 URI = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
 USER = os.getenv("NEO4J_USER", "neo4j")
@@ -305,6 +304,15 @@ class _Conn:
     def run_query(self, q):
         return read(lambda tx: tx.run(q).data())
 
+RESERVE_BUFFER_HR = 0.05
+
+def path_to_reserved(path):
+    out = []
+    for step in path:
+        start_t = max(0.0, step["arrival_hr"] - RESERVE_BUFFER_HR) #just to handle the arr1==dep2 cases
+        end_t = step["departure_hr"] + RESERVE_BUFFER_HR
+        out.append((step["checkpoint"], start_t, end_t))
+    return out
 
 @app.post("/api/plan")
 def plan(req: PlanRequest):
@@ -336,6 +344,18 @@ def plan(req: PlanRequest):
     if len(ids) != len(set(ids)):
         raise HTTPException(422, "duplicate troop_id in request")
 
+    confirmed = [
+        m for m in get_persisted_missions() if m.get("status") == "approved" and m.get("feasible")
+    ]
+    confirmed_troops = {m.get("troop_name") for m in confirmed}
+    for tid in ids:
+        if tid in confirmed_troops:
+            raise HTTPException(409, f"troop '{tid}' already has a confirmed mission")
+
+    reserved = []
+    for m in confirmed:
+        reserved.extend(path_to_reserved(m["plan"]["path"]))
+
     all_speeds = fetch_all_troop_speeds_from_laravel(
         lambda query: read(lambda tx: tx.run(query).data())
     )
@@ -356,7 +376,7 @@ def plan(req: PlanRequest):
     troops = {t.troop_id: (t.start, t.end) for t in req.troops}
 
     try:
-        paths = cbs(troops, speeds, graph, coords)
+        paths = cbs(troops, speeds, graph, coords,reserved=reserved)
     except ValueError as e:
         return {"feasible": False, "reason": str(e), "plans": {}}
 
