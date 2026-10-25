@@ -56,6 +56,7 @@ class extends Component
                             <th class="p-3">Service ID</th>
                             <th class="p-3">Name</th>
                             <th class="p-3">Rank</th>
+                            <th class="p-3">Reporting Officer</th>
                             <th class="p-3">Checkpoint</th>
                             <th class="p-3">Troop</th>
                         </tr>
@@ -66,8 +67,27 @@ class extends Component
                                 <td class="p-3 font-mono-data text-xs text-tertiary">{{ data_get($soldier, 'service_id', '—') }}</td>
                                 <td class="p-3 text-sm text-on-surface">{{ data_get($soldier, 'name', '—') }}</td>
                                 <td class="p-3 text-sm text-on-surface-variant">{{ data_get($soldier, 'rank', '—') }}</td>
-                                <td class="p-3 text-sm text-on-surface-variant">{{ data_get($soldier, 'checkpoint.checkpoint_code', data_get($soldier, 'checkpoint_code', '—')) }}</td>
-                                <td class="p-3 text-sm text-on-surface-variant">{{ data_get($soldier, 'troop.name', data_get($soldier, 'troop_name', '—')) }}</td>
+                                <td class="p-3 text-sm text-on-surface-variant">
+                                    @if (strtolower(trim((string) data_get($soldier, 'rank'))) === 'general')
+                                        None (top of hierarchy)
+                                    @else
+                                        {{ data_get($soldier, 'reports_to_id', '—') }}
+                                        @if (data_get($soldier, 'reports_to_id'))
+                                            <span class="block text-xs text-on-surface">
+                                                {{ data_get($soldier, 'reports_to_name', 'Name unavailable') }}
+                                            </span>
+                                        @endif
+                                    @endif
+                                </td>
+                                <td class="p-3 text-sm text-on-surface-variant">
+                                    {{ data_get($soldier, 'checkpoint.name', '—') }}
+                                    <span class="block font-mono-data text-[10px] text-tertiary">
+                                        {{ data_get($soldier, 'checkpoint.checkpoint_code', data_get($soldier, 'stationed_at_id', '—')) }}
+                                    </span>
+                                </td>
+                                <td class="p-3 text-sm text-on-surface-variant">
+                                    {{ data_get($soldier, 'troop.name', data_get($soldier, 'troop_id', '—')) }}
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

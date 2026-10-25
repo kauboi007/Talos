@@ -1,2 +1,3 @@
 fastapi[standard]
 neo4j
+redis

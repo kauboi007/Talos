@@ -33,15 +33,14 @@
     $operator = auth()->user();
     $name = $operator->name();
     $role = $operator->role;
-
-    // Administrative users may not have a linked Soldier record.
-    $rank = $operator->soldier?->rank
-        ?? str($role)->replace('_', ' ')->title()->toString();
-
     $canDispatch = in_array($role, [
         'system_admin',
         'hq_admin',
     ], true);
+
+    // Administrative users may not have a linked Soldier record.
+    $rank = $operator->soldier?->rank
+        ?? str($role)->replace('_', ' ')->title()->toString();
 
     $canManagePersonnel = in_array($role, [
         'system_admin',
@@ -60,16 +59,12 @@
         'hq_admin',
     ], true);
 
-    $canViewLogs = in_array($role, [
-        'system_admin',
-        'hq_admin',
-        'base_admin',
-    ], true);
-
     $canManageSettings = in_array($role, [
         'system_admin',
         'hq_admin',
     ], true);
+
+    $canManageUsers = $role === 'system_admin';
 @endphp
 
 <div
@@ -128,20 +123,6 @@
                 </div>
             </a>
 
-            @if ($canDispatch)
-                <button
-                    type="button"
-                    @click="missionOpen = true; sidebarOpen = false"
-                    class="w-full bg-tertiary text-on-tertiary py-3 px-4 rounded
-                           text-xs font-bold uppercase tracking-wider flex
-                           items-center justify-center gap-2
-                           hover:bg-tertiary-fixed transition-colors
-                           shadow-[0_0_12px_rgba(255,185,95,0.25)]"
-                >
-                    <x-lucide-zap class="w-[18px] h-[18px]" />
-                    Execute Mission
-                </button>
-            @endif
         </div>
 
         {{-- Primary navigation --}}
@@ -157,7 +138,7 @@
                 wire:navigate
                 @click="sidebarOpen = false"
                 @class([
-                    'flex items-center gap-4 px-4 py-3 text-sm font-semibold border-l-2 transition-colors',
+                    'flex items-center gap-4 px-4 py-3 text-sm font-normal border-l-2 transition-colors',
                     'text-tertiary border-tertiary bg-surface-container-high' => request()->routeIs('dashboard'),
                     'text-on-surface-variant border-transparent hover:bg-surface-variant hover:text-on-surface' => !request()->routeIs('dashboard'),
                 ])
@@ -173,7 +154,7 @@
                     wire:navigate
                     @click="sidebarOpen = false"
                     @class([
-                        'flex items-center gap-4 px-4 py-3 text-sm font-semibold border-l-2 transition-colors',
+                        'flex items-center gap-4 px-4 py-3 text-sm font-normal border-l-2 transition-colors',
                         'text-tertiary border-tertiary bg-surface-container-high' => request()->routeIs('profile'),
                         'text-on-surface-variant border-transparent hover:bg-surface-variant hover:text-on-surface' => !request()->routeIs('profile'),
                     ])
@@ -197,6 +178,20 @@
                 >
                     <x-lucide-users class="w-5 h-5" />
                     Personnel
+                </a>
+            @endif
+
+            @if ($canManageUsers)
+                <a
+                    href="{{ route('dashboard') }}#user-administration"
+                    wire:navigate
+                    @click="sidebarOpen = false"
+                    class="flex items-center gap-4 px-4 py-3 text-sm
+                           text-on-surface-variant hover:bg-surface-variant
+                           hover:text-on-surface transition-colors"
+                >
+                    <x-lucide-user-cog class="w-5 h-5" />
+                    Manage Users
                 </a>
             @endif
 
@@ -232,33 +227,6 @@
                 </a>
             @endif
 
-            {{-- Mission routing --}}
-            <a
-                href="/routing"
-                wire:navigate
-                @click="sidebarOpen = false"
-                class="flex items-center gap-4 px-4 py-3 text-sm
-                       text-on-surface-variant hover:bg-surface-variant
-                       hover:text-on-surface transition-colors"
-            >
-                <x-lucide-route class="w-5 h-5" />
-                Mission Routing
-            </a>
-
-            @if ($canViewLogs)
-                <a
-                    href="/logs"
-                    wire:navigate
-                    @click="sidebarOpen = false"
-                    class="flex items-center gap-4 px-4 py-3 text-sm
-                           text-on-surface-variant hover:bg-surface-variant
-                           hover:text-on-surface transition-colors"
-                >
-                    <x-lucide-database class="w-5 h-5" />
-                    SEC-OPS Logs
-                </a>
-            @endif
-
             @if ($canManageSettings)
                 <a
                     href="/settings"
@@ -287,7 +255,7 @@
 
                 <div class="min-w-0">
                     <p class="text-xs font-semibold text-on-surface">
-                        Secure Session
+                        {{ $role === 'soldier' ? 'Secure Session' : str($role)->replace('_', ' ')->title() }}
                     </p>
                     <p class="text-[10px] text-on-surface-variant font-mono-data truncate">
                         {{ $name }}

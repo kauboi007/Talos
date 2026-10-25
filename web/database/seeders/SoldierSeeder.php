@@ -143,7 +143,7 @@ class SoldierSeeder extends Seeder
             ['Abhindandhan Jai', 'General', 'system_admin'],
             ['Ravi Kumar', 'Lieutenant'],
             ['Vishal Menon', 'Captain'],
-            ['Asha Nair', 'Colonel'],
+            ['Asha Nair', 'Colonel', 'hq_admin'],
             ['Sandeep Rao', 'Major'],
             ['Nithya Iyer', 'Lieutenant'],
             ['Rohan Das', 'Captain'],

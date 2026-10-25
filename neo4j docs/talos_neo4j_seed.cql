@@ -1,14 +1,14 @@
 UNWIND [
-  ['tambaram', 'CHK-TAMBARAM'],
-  ['avadi', 'CHK-AVADI'],
-  ['st_thomas_mount', 'CHK-ST-THOMAS-MOUNT'],
-  ['wellington', 'CHK-WELLINGTON'],
-  ['sulur', 'CHK-SULUR'],
-  ['ins_rajali', 'CHK-INS-RAJALI'],
-  ['ennore', 'CHK-ENNORE'],
-  ['ramanathapuram', 'CHK-RAMANATHAPURAM'],
-  ['thanjavur', 'CHK-THANJAVUR'],
-  ['chengalpet', 'CHK-CHENGALPET']
+  ['Tambaram', 'CHK-TAMBARAM'],
+  ['Avadi', 'CHK-AVADI'],
+  ['St Thomas Mount', 'CHK-ST-THOMAS-MOUNT'],
+  ['Wellington', 'CHK-WELLINGTON'],
+  ['Sulur', 'CHK-SULUR'],
+  ['INS_Rajali', 'CHK-INS-RAJALI'],
+  ['Ennore', 'CHK-ENNORE'],
+  ['Ramanathapuram', 'CHK-RAMANATHAPURAM'],
+  ['Thanjavur', 'CHK-THANJAVUR'],
+  ['Chengalpet', 'CHK-CHENGALPET']
 ] AS row
 MATCH (c:checkpoint {name: row[0]})
 SET c.checkpoint_code = row[1];
@@ -22,16 +22,16 @@ FOR (c:checkpoint)
 REQUIRE c.checkpoint_code IS UNIQUE;
 
 UNWIND [
-  {code:'CHK-TAMBARAM', name:'tambaram', status:'open', type:'depot', lat:12.92, lng:80.13},
-  {code:'CHK-AVADI', name:'avadi', status:'open', type:'base', lat:13.11, lng:80.10},
-  {code:'CHK-ST-THOMAS-MOUNT', name:'st_thomas_mount', status:'open', type:'HQ', lat:13.01, lng:80.20},
-  {code:'CHK-WELLINGTON', name:'wellington', status:'open', type:'base', lat:11.35, lng:76.79},
-  {code:'CHK-SULUR', name:'sulur', status:'open', type:'outpost', lat:11.02, lng:77.16},
-  {code:'CHK-INS-RAJALI', name:'ins_rajali', status:'open', type:'base', lat:13.09, lng:79.67},
-  {code:'CHK-ENNORE', name:'ennore', status:'open', type:'outpost', lat:13.23, lng:80.32},
-  {code:'CHK-RAMANATHAPURAM', name:'ramanathapuram', status:'open', type:'base', lat:9.37, lng:78.83},
-  {code:'CHK-THANJAVUR', name:'thanjavur', status:'open', type:'depot', lat:10.78, lng:79.10},
-  {code:'CHK-CHENGALPET', name:'chengalpet', status:'open', type:'HQ', lat:12.69, lng:79.98}
+  {code:'CHK-TAMBARAM', name:'Tambaram', status:'open', type:'depot', lat:12.92, lng:80.13},
+  {code:'CHK-AVADI', name:'Avadi', status:'open', type:'base', lat:13.11, lng:80.10},
+  {code:'CHK-ST-THOMAS-MOUNT', name:'St Thomas Mount', status:'open', type:'HQ', lat:13.01, lng:80.20},
+  {code:'CHK-WELLINGTON', name:'Wellington', status:'open', type:'base', lat:11.35, lng:76.79},
+  {code:'CHK-SULUR', name:'Sulur', status:'open', type:'outpost', lat:11.02, lng:77.16},
+  {code:'CHK-INS-RAJALI', name:'INS_Rajali', status:'open', type:'base', lat:13.09, lng:79.67},
+  {code:'CHK-ENNORE', name:'Ennore', status:'open', type:'outpost', lat:13.23, lng:80.32},
+  {code:'CHK-RAMANATHAPURAM', name:'Ramanathapuram', status:'open', type:'base', lat:9.37, lng:78.83},
+  {code:'CHK-THANJAVUR', name:'Thanjavur', status:'open', type:'depot', lat:10.78, lng:79.10},
+  {code:'CHK-CHENGALPET', name:'Chengalpet', status:'open', type:'HQ', lat:12.69, lng:79.98}
 ] AS row
 MERGE (c:checkpoint {checkpoint_code: row.code})
 SET c.name = row.name,
@@ -188,10 +188,10 @@ MERGE (a)-[r:route_to]->(b)
 SET r.distance = row[2];
 
 UNWIND [
-  {name:'alpha', type:'kill', head_count:4, priority:1, status:'started'},
-  {name:'delta', type:'medic', head_count:2, priority:2, status:'started'},
-  {name:'bravo', type:'logistics', head_count:6, priority:2, status:'started'},
-  {name:'charlie', type:'kill', head_count:5, priority:1, status:'started'}
+  {name:'Alpha', type:'kill', head_count:4, priority:1, status:'started'},
+  {name:'Delta', type:'medic', head_count:2, priority:2, status:'started'},
+  {name:'Bravo', type:'logistics', head_count:6, priority:2, status:'started'},
+  {name:'Charlie', type:'kill', head_count:5, priority:1, status:'started'}
 ] AS row
 MERGE (t:troop {name: row.name})
 SET t.type = row.type,
@@ -222,18 +222,18 @@ MATCH (b:soldier {service_id: row[1]})
 MERGE (a)-[:reports_to]->(b);
 
 UNWIND [
-  ['TAL-OF-0002', 'alpha'],
-  ['TAL-OF-0003', 'delta'],
-  ['TAL-OF-0007', 'bravo'],
-  ['TAL-OF-0008', 'charlie']
+  ['TAL-OF-0002', 'Alpha'],
+  ['TAL-OF-0003', 'Delta'],
+  ['TAL-OF-0007', 'Bravo'],
+  ['TAL-OF-0008', 'Charlie']
 ] AS row
 MATCH (s:soldier {service_id: row[0]})
 MATCH (t:troop {name: row[1]})
 MERGE (s)-[:belongs_to]->(t);
 
 UNWIND [
-  ['delta', 'TAL-OF-0001'],
-  ['alpha', 'TAL-OF-0005']
+  ['Delta', 'TAL-OF-0001'],
+  ['Alpha', 'TAL-OF-0005']
 ] AS row
 MATCH (t:troop {name: row[0]})
 MATCH (s:soldier {service_id: row[1]})
@@ -248,14 +248,14 @@ MATCH (c:checkpoint {checkpoint_code: row[1]})
 MERGE (te)-[:affects]->(c);
 
 UNWIND [
-  ['alpha', 'CHK-TAMBARAM', 'starts_at'],
-  ['alpha', 'CHK-INS-RAJALI', 'ends_at'],
-  ['bravo', 'CHK-ST-THOMAS-MOUNT', 'starts_at'],
-  ['bravo', 'CHK-SULUR', 'ends_at'],
-  ['charlie', 'CHK-ENNORE', 'starts_at'],
-  ['charlie', 'CHK-WELLINGTON', 'ends_at'],
-  ['delta', 'CHK-CHENGALPET', 'starts_at'],
-  ['delta', 'CHK-THANJAVUR', 'ends_at']
+  ['Alpha', 'CHK-TAMBARAM', 'starts_at'],
+  ['Alpha', 'CHK-INS-RAJALI', 'ends_at'],
+  ['Bravo', 'CHK-ST-THOMAS-MOUNT', 'starts_at'],
+  ['Bravo', 'CHK-SULUR', 'ends_at'],
+  ['Charlie', 'CHK-ENNORE', 'starts_at'],
+  ['Charlie', 'CHK-WELLINGTON', 'ends_at'],
+  ['Delta', 'CHK-CHENGALPET', 'starts_at'],
+  ['Delta', 'CHK-THANJAVUR', 'ends_at']
 ] AS row
 MATCH (t:troop {name: row[0]})
 MATCH (c:checkpoint {checkpoint_code: row[1]})
@@ -265,3 +265,26 @@ FOREACH (_ IN CASE WHEN row[2] = 'starts_at' THEN [1] ELSE [] END |
 FOREACH (_ IN CASE WHEN row[2] = 'ends_at' THEN [1] ELSE [] END |
   MERGE (t)-[:ends_at]->(c)
 );
+
+MATCH (t:troop)
+WHERE t.name IN ['Alpha', 'Bravo', 'Charlie', 'Delta']
+WITH t
+ORDER BY t.name
+WITH collect(t) AS troops
+
+MATCH (s:soldier)
+WITH troops, s
+ORDER BY s.service_id
+WITH troops, collect(s) AS soldiers
+
+UNWIND range(0, size(soldiers) - 1) AS i
+WITH troops, soldiers[i] AS s, i
+
+OPTIONAL MATCH (s)-[existing:belongs_to]->(:troop)
+WITH troops, s, i, existing
+WHERE existing IS NULL
+
+WITH troops, s, i,
+     troops[i % size(troops)] AS targetTroop
+
+MERGE (s)-[:belongs_to]->(targetTroop);

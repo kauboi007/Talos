@@ -74,6 +74,7 @@ class extends Component
     private function loadOperationalData(): void
     {
         $user = $this->currentUser();
+        $soldier = $user->soldier;
         $this->currentBase = null;
         $this->reportingOfficer = null;
         $this->currentTroop = null;
@@ -86,14 +87,18 @@ class extends Component
         try {
             $neo4j = app(Neo4jService::class);
             $overview = $neo4j->soldierOverview($user);
-            $chain = $neo4j->reportingChain($user);
+            $chain = strtolower(trim((string) $soldier->rank)) === 'general'
+                ? []
+                : $neo4j->reportingChain($user);
 
             $this->currentBase = data_get($overview, 'checkpoint')
                 ?? data_get($overview, 'current_base');
             $this->currentTroop = data_get($overview, 'troop');
-            $this->reportingOfficer = data_get($overview, 'reporting_officer')
-                ?? data_get($chain, 'immediate')
-                ?? data_get($chain, '0');
+            $this->reportingOfficer = strtolower(trim((string) $soldier->rank)) === 'general'
+                ? null
+                : data_get($overview, 'reporting_officer')
+                    ?? data_get($chain, 'immediate')
+                    ?? data_get($chain, '0');
         } catch (ConnectionException|RequestException $exception) {
             report($exception);
             $this->operationalError = 'Operational assignment data is temporarily unavailable.';
@@ -298,10 +303,18 @@ class extends Component
                         <div class="bg-surface-container-low border border-outline-variant p-4">
                             <p class="text-[10px] uppercase tracking-wider text-on-surface-variant">Reporting Officer</p>
                             <p class="mt-2 text-sm font-semibold text-on-surface">
-                                {{ data_get($reportingOfficer, 'name', 'Not assigned') }}
+                                @if (strtolower(trim((string) $soldier->rank)) === 'general')
+                                    None (top of hierarchy)
+                                @else
+                                    {{ data_get($reportingOfficer, 'name', 'Name unavailable') }}
+                                @endif
                             </p>
                             <p class="mt-1 font-mono-data text-[10px] text-tertiary">
-                                {{ data_get($reportingOfficer, 'service_id', '—') }}
+                                @if (strtolower(trim((string) $soldier->rank)) === 'general')
+                                    —
+                                @else
+                                    {{ data_get($reportingOfficer, 'service_id', '—') }}
+                                @endif
                             </p>
                         </div>
                         <div class="bg-surface-container-low border border-outline-variant p-4">
