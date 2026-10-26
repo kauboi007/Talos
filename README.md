@@ -202,7 +202,8 @@ Relationships across stores are modelled by storing the other entity's id as a f
 
 - Waiting on a threatened checkpoint adds no extra threat penalty.
 - Plans are static and not recomputed from live position updates.
-- Heuristic functions and CBS weights are not optimized for peak performance
+- Heuristic functions and CBS weights are not optimized for peak performance.
+- Concurrent mission planning is not possible as of now.
 
 **Future work:** periodic re-planning from live updates, optimizing the CBS tree and weights for better decision performance, rank and mission-priority-aware planning.
 
