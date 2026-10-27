@@ -1,7 +1,5 @@
 # TALOS: Defense Analytical System
 
-
-
 ## 1. Problem Statement and Abstract
 
 **Problem.** Military troop movements between checkpoints are planned manually. Simultaneous movements can collide at shared checkpoints or deadlock, and threat information is not factored into route choice.
@@ -41,40 +39,45 @@
 | Service API | FastAPI |
 | Web backend and UI | Laravel (PHP) + Livewire |
 
-**Architecture layers:** Livewire dashboard → Laravel backend → Python/FastAPI analytical service → Neo4j / MongoDB / Redis.
+**Architecture layers:** Livewire dashboard -> Laravel backend -> Python/FastAPI analytical service -> Neo4j / MongoDB / Redis.
 
 ---
 ## 5. Setup and Run
-## AI GENERATED PLEASE CHANGE
-### 5.1 Neo4j
-1. Create a new local database (Neo4j Desktop or server) and start it.
-2. Apply the constraints and indexes: `database/neo4j/` *[file name]*.
-3. Load the seed data: `database/neo4j/` *[file name]*.
 
-### 5.2 MongoDB
-1. Start MongoDB.
-2. Import the sample collections from `database/mongodb/` *[confirm]*.
+This project has been containerized and can work with major containerization platforms such as `docker` and
+`podman`. To start with, clone the project via:
 
-### 5.3 Redis
-1. Start Redis. *[confirm whether reservations are integrated]*
-
-### 5.4 Configure
-1. Copy `.env.example` to `.env`.
-2. Fill in the Neo4j, MongoDB and Redis connection details.
-
-### 5.5 Run the analytical service
-```bash
-pip install -r requirements.txt
-uvicorn api:app --reload   # [verify module and app names]
 ```
-Interactive API docs are served by FastAPI at `/docs`. All routes are under the `/api` base path.
-
-### 5.6 Run the web app
-```bash
-composer install
-php artisan serve
+$ git clone https://github.com/kauboi007/Talos.git
+$ cd Talos
 ```
-*[add any Livewire / asset build steps]*
+
+1. Setup your local `.env` file by copying the `.env.example` and then modify the connection details
+The `docker-compose.yml` file already sets up all the backend databases for the application.
+
+> [!TIP]
+> You can start the DBs beforehand via:
+> ```
+> $ docker compose up -d neo4j mongo redis
+> ```
+
+2. Run the CQL scripts (`talos_neo4j_seeder.cql` then `talos_report_hier.cql`) to seed the basic data for
+the Neo4j DB. 
+
+3. Run the migrations for the DB via
+
+```
+$ composer run setup
+$ php artisan db:seed
+```
+
+4. You can start the application via
+
+```
+$ docker compose up -d
+```
+
+and point to `http://localhost:8000` at your browser to view the application
 
 ---
 
@@ -88,7 +91,7 @@ TALOS uses three NoSQL stores.
 
 | Node | Properties |
 |---|---|
-| `officer` | id, name, rank, rank_val, status |
+| `officer` | id, service_id |
 | `checkpoint` | id, name, status, lat, lng, type |
 | `troop` | id, name, status, type, head_count, priority |
 | `threatevent` | id, name, type, severity, timestamp |
@@ -111,31 +114,41 @@ TALOS uses three NoSQL stores.
 - `route_to` is directional in storage but queried bidirectionally.
 
 ### 6.2 MongoDB (document)
-## AI GENERATED PLEASE CHANGE
+
+This is used in order to store mostly static (durable) data and logs which doesn't directly correspond to
+relations within the graph modelled in neo4j.
 
 | Collection | Purpose | Key fields |
 |---|---|---|
-| `Soldier_Record` | Static soldier / officer attributes | *[confirm]* (references `officer.id`) |
-| `Transport_Asset` | Vehicles and cargo for a troop | *[confirm]* (references `troop.id`) |
-| `Mission` | Confirmed mission log | *[confirm]* (references troop and checkpoint ids) |
+| `soldiers` | Static soldier / officer attributes | (referenced via `service_id`) |
+| `users` | User attributes for authentication and authorization | (referenced via `service_id`) |
+| `transports` | Vehicles and cargo for a troop | (referenced via `vehicle_no`) |
+| `missions` | Confirmed mission log | (references troop and checkpoint ids) |
+
+Various other collections (such as `sessions`, `migrations`, etc...) are also created by Laravel
+automatically for facilitating the authentication, website functions and Laravel's internal functionality.
 
 ### 6.3 Redis (key-value)
-## AI GENERATED PLEASE CHANGE (STALE)
+
+Redis is used for the following:
+- Primarily to facilitate request-response communication between CBS service in Python and Laravel (done 
+via Streams). This architecture is followed so that to allow independent horizontal scaling of python CBS
+service irrespective of the web application.
+- It is also used by the Laravel Framework itself for its internal functionality (such as caching).
 
 | Entry | Purpose |
 |---|---|
-| `Slot_Reservation` | Temporary checkpoint-and-timestep reservation held for a troop, with a TTL so stale holds expire *[confirm]* |
+| `talos:cbs:requests` | Redis Stream to manage data requests from CBS service to Laravel |
+| `talos:cbs:responses` | Redis Stream to manage data responses from Laravel service to CBS |
 
 ### 6.4 Cross-database references
-## AI GENERATED PLEASE CHANGE
 
-Relationships across stores are modelled by storing the other entity's id as a foreign-key-style reference (e.g. `Mission.troop_id` → `troop.id`).
+Relationships across stores are modelled by storing the other entity's id as a foreign-key-style reference (e.g. `missions.troop_id` → `troop.id`). Referential integrity is validated at application level due to the
+polyglot architecture. Hence each service is mapped to a single DB (Laravel -> MongoDB), (Python CBS -> neo4j) and Redis is used as means for message passing between both.
 
 ### 6.5 Sample data
-## AI GENERATED PLEASE CHANGE (HARISH PLEASE UPDATE THIS)
-- 8 officers, 14 checkpoints, 4 troops (alpha, bravo, charlie, delta), 2 threat events, about 27 `route_to` roads.
+- 124 officers, 14 checkpoints, 4 troops (alpha, bravo, charlie, delta), 2 threat events, about 27 `route_to` roads.
 - Checkpoint coordinates use public Tamil Nadu installation locations; all names, records and personnel are synthetic.
-- MongoDB and Redis sample counts: *[fill]*.
 
 ---
 
@@ -161,42 +174,40 @@ Relationships across stores are modelled by storing the other entity's id as a f
 ### 8.2 API Documentation & CRUD Operations
 
 
-*Screenshot coming soon.*
+![CBS API Docs](screenshots/api.png)
+![Talos User CRUD Ops](screenshots/user_crud.png)
 
 ---
 
 ### 8.3 Single-Troop Route
 
-
-*Screenshot coming soon.*
+![CBS Single Troop](screenshots/single_troop.png)
 
 ---
 
 ### 8.4 Multi-Troop Plan with Conflict Resolution
 
-
-*Screenshot coming soon.*
+![CBS Multi Troop](screenshots/multi_troop.png)
 
 ---
 
 ### 8.5 Threat Warning on Unavoidable Risk
 
-
-*Screenshot coming soon.*
+![CBS Path Failure](screenshots/mission_failure.png)
 
 ---
 
 ### 8.6 Livewire Dashboard
 
 
-*Screenshot coming soon.*
+![Talos Home Page](screenshots/talos_home.png)
+![User Dashboard](screenshots/talos_dashboard.png)
 
 ---
 
 ### 8.7 MongoDB Mission Log
 
-
-*Screenshot coming soon.*
+![Mission View](screenshots/mission.png)
 
 ## 9. Known Limitations
 
@@ -211,7 +222,7 @@ Relationships across stores are modelled by storing the other entity's id as a f
 
 ## 10. Demonstration Video
 
-YouTube: *[add link]*
+TODO: Add YT link
 
 ---
 

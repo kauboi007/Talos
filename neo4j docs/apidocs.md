@@ -1,6 +1,6 @@
 ## Quick reference
  
-base url for api - http://127.0.0.1:8000
+base url for api - http://127.0.0.1:8001
 
 | Method | Path | Purpose | Success |
 |---|---|---|---|
